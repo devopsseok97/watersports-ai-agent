@@ -4,7 +4,7 @@ from app.services.agent import AgentService
 from app.services.db import save_conversation
 from app.services.slack import notify_owner
 from app.config import settings
-import hmac, hashlib, logging
+import hmac, hashlib, logging, asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,11 +57,8 @@ async def kakao_webhook(request: Request):
     except Exception as e:
         logger.warning(f"대화 저장 실패: {e}")
 
-    # 예약 의향 감지 → 사장님 슬랙 알림
+    # 예약 의향 감지 → 사장님 슬랙 알림 (백그라운드)
     if any(kw in user_message for kw in BOOKING_KEYWORDS):
-        try:
-            await notify_owner(user_id=user_id, message=user_message)
-        except Exception as e:
-            logger.warning(f"슬랙 알림 실패: {e}")
+        asyncio.create_task(notify_owner(user_id=user_id, message=user_message))
 
     return KakaoWebhookResponse.from_text(reply)
