@@ -1,19 +1,17 @@
 import httpx
 from app.config import settings
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
-# 기상청 단기예보 API
 KMA_BASE_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
 
-# 가평군 격자 좌표 (수상스포츠 밀집 지역 기준 - 업체별로 변경 가능)
 DEFAULT_NX = 68
 DEFAULT_NY = 127
 
-# 수상스포츠 운영 불가 날씨 코드
 BAD_WEATHER_CODES = {
-    "PTY": {  # 강수형태
+    "PTY": {
         "1": "비가 내리고 있어 오늘은 운영이 어려울 수 있어요 ☔",
         "2": "비/눈이 내리고 있어 오늘은 운영이 어려울 수 있어요 🌨️",
         "3": "눈이 내리고 있어 오늘은 운영이 어려울 수 있어요 ❄️",
@@ -21,10 +19,16 @@ BAD_WEATHER_CODES = {
     }
 }
 
+_cache: dict = {"result": None, "ts": 0}
+CACHE_TTL = 300  # 5분
+
 
 async def get_operation_status(nx: int = DEFAULT_NX, ny: int = DEFAULT_NY) -> str:
-    """기상청 API로 현재 날씨 확인 후 운영 가능 여부 반환"""
+    """기상청 API로 현재 날씨 확인 후 운영 가능 여부 반환 (5분 캐싱)"""
     from datetime import datetime
+
+    if _cache["result"] and time.time() - _cache["ts"] < CACHE_TTL:
+        return _cache["result"]
 
     now = datetime.now()
     base_date = now.strftime("%Y%m%d")
@@ -42,7 +46,7 @@ async def get_operation_status(nx: int = DEFAULT_NX, ny: int = DEFAULT_NY) -> st
     }
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get(KMA_BASE_URL, params=params)
             data = response.json()
 
@@ -52,10 +56,16 @@ async def get_operation_status(nx: int = DEFAULT_NX, ny: int = DEFAULT_NY) -> st
             value = item.get("obsrValue", "0")
 
             if category == "PTY" and value in BAD_WEATHER_CODES["PTY"]:
-                return BAD_WEATHER_CODES["PTY"][value]
+                result = BAD_WEATHER_CODES["PTY"][value]
+                _cache["result"] = result
+                _cache["ts"] = time.time()
+                return result
 
-        return "현재 날씨가 맑아 정상 운영 중입니다 ☀️"
+        result = "현재 날씨가 맑아 정상 운영 중입니다 ☀️"
+        _cache["result"] = result
+        _cache["ts"] = time.time()
+        return result
 
     except Exception as e:
         logger.warning(f"날씨 API 조회 실패: {e}")
-        return "날씨 정보를 불러오지 못했어요. 운영 여부는 전화로 확인 부탁드려요."
+        return "운영 중입니다."
