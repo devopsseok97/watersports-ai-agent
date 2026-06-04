@@ -2,6 +2,7 @@ import httpx
 from app.config import settings
 import logging
 import time
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -25,47 +26,10 @@ CACHE_TTL = 300  # 5분
 
 async def get_operation_status(nx: int = DEFAULT_NX, ny: int = DEFAULT_NY) -> str:
     """기상청 API로 현재 날씨 확인 후 운영 가능 여부 반환 (5분 캐싱)"""
-    from datetime import datetime
-
     if _cache["result"] and time.time() - _cache["ts"] < CACHE_TTL:
         return _cache["result"]
 
-    now = datetime.now()
+    # 초단기실황은 매시 40분 이후 생성 → 40분 빼서 직전 시각 조회
+    now = datetime.now() - timedelta(minutes=40)
     base_date = now.strftime("%Y%m%d")
-    base_time = now.strftime("%H00")
-
-    params = {
-        "serviceKey": settings.kma_api_key,
-        "numOfRows": 10,
-        "pageNo": 1,
-        "dataType": "JSON",
-        "base_date": base_date,
-        "base_time": base_time,
-        "nx": nx,
-        "ny": ny,
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            response = await client.get(KMA_BASE_URL, params=params)
-            data = response.json()
-
-        items = data["response"]["body"]["items"]["item"]
-        for item in items:
-            category = item.get("category")
-            value = item.get("obsrValue", "0")
-
-            if category == "PTY" and value in BAD_WEATHER_CODES["PTY"]:
-                result = BAD_WEATHER_CODES["PTY"][value]
-                _cache["result"] = result
-                _cache["ts"] = time.time()
-                return result
-
-        result = "현재 날씨가 맑아 정상 운영 중입니다 ☀️"
-        _cache["result"] = result
-        _cache["ts"] = time.time()
-        return result
-
-    except Exception as e:
-        logger.warning(f"날씨 API 조회 실패: {e}")
-        return "운영 중입니다."
+    base_time
