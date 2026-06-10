@@ -51,3 +51,12 @@ CREATE TABLE IF NOT EXISTS photo_albums (
 
 CREATE INDEX IF NOT EXISTS idx_photo_albums_code       ON photo_albums (code);
 CREATE INDEX IF NOT EXISTS idx_photo_albums_created_at ON photo_albums (created_at DESC);
+
+
+-- ── 4. 기존 DB 마이그레이션 (테이블이 이미 있을 때 아래 구문 실행) ─────────
+-- conversations 에 누락된 컬럼 추가
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS is_booking_intent BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS admin_memo        TEXT    NOT NULL DEFAULT '';
+
+-- reservations 에 결제수단 컬럼 추가
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT '계좌이체';

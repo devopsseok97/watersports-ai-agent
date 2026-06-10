@@ -14,6 +14,8 @@ from fastapi.responses import HTMLResponse
 from app.routers.admin import require_admin
 from app.services import availability as av
 
+PAY_OPTS = av.PAYMENT_METHODS
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -49,10 +51,11 @@ async def post_reservation(
     platform: str = Form("현장"),
     memo: str = Form(""),
     amount: str = Form("0"),
+    payment_method: str = Form("계좌이체"),
     _=Depends(require_admin),
 ):
     row = await av.add_reservation(
-        date, program, time_slot, customer_name, people, platform, memo, amount
+        date, program, time_slot, customer_name, people, platform, memo, amount, payment_method
     )
     return {"ok": True, "reservation": row}
 
@@ -67,10 +70,11 @@ async def update_reservation(
     platform: str = Form("현장"),
     memo: str = Form(""),
     amount: str = Form("0"),
+    payment_method: str = Form("계좌이체"),
     _=Depends(require_admin),
 ):
     row = await av.update_reservation(
-        id, program, time_slot, customer_name, people, platform, memo, amount
+        id, program, time_slot, customer_name, people, platform, memo, amount, payment_method
     )
     return {"ok": True, "reservation": row}
 
@@ -299,7 +303,16 @@ ADMIN_HTML = """<!DOCTYPE html>
         <select id="f_plat"></select>
       </div>
       <div class="field">
-        <label>실수령 금액 (원)</label>
+        <label>결제수단</label>
+        <select id="f_pay">
+          <option value="계좌이체">💳 계좌이체</option>
+          <option value="현장카드">💳 현장카드</option>
+          <option value="현금">💵 현금</option>
+          <option value="미수령">⏳ 미수령</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>실수령 금액 (원) <span id="price-hint" style="color:var(--accent);font-weight:600;font-size:13px;margin-left:6px;"></span></label>
         <input id="f_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
       </div>
       <div class="field full">
@@ -348,6 +361,15 @@ ADMIN_HTML = """<!DOCTYPE html>
           <select id="e_plat"></select>
         </div>
         <div class="field">
+          <label>결제수단</label>
+          <select id="e_pay">
+            <option value="계좌이체">💳 계좌이체</option>
+            <option value="현장카드">💳 현장카드</option>
+            <option value="현금">💵 현금</option>
+            <option value="미수령">⏳ 미수령</option>
+          </select>
+        </div>
+        <div class="field full">
           <label>실수령 금액 (원)</label>
           <input id="e_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
         </div>
@@ -377,6 +399,17 @@ ADMIN_HTML = """<!DOCTYPE html>
 let CONFIG = null;
 const dateEl = document.getElementById('date');
 const $ = id => document.getElementById(id);
+
+const PRICE_MAP = {
+  '데이패들보드': '렌탈 3만원 / 강습포함 5만원 (1인)',
+  '선셋패들보드': '렌탈 3만원 / 강습포함 5만원 (1인)',
+  '데이카약':     '1인 3만원',
+  '선셋카약':     '1인 3만원',
+  '윈드서핑':     '렌탈 8만원 / 강습포함 12만원 (1인)',
+  '전동e포일':    '렌탈 8만원 / 강습포함 15만원 (1인)',
+  '윙포일':       '렌탈 8만원 / 강습포함 15만원 (1인)',
+  '펌핑포일':     '렌탈 7만원 / 강습포함 10만원 (1인)',
+};
 
 /* ===== 테마 ===== */
 function applyTheme(t){
@@ -424,6 +457,8 @@ function onProgChange(){
     sel.style.display='none'; txt.style.display='';
     txt.value='';
   }
+  const hint = $('price-hint');
+  if(hint) hint.textContent = PRICE_MAP[$('f_prog').value] ? '· 단가 참고: ' + PRICE_MAP[$('f_prog').value] : '';
 }
 
 function getTime(){
@@ -479,7 +514,7 @@ function renderList(rows){
   if(!rows.length){ el.innerHTML = '<div class="empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
   let sumAmt = 0;
   el.innerHTML = rows.map(r=>{
-    const meta = [r.platform, r.memo].filter(Boolean).map(esc).join(' · ');
+    const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
     const st = (r.status||'예약');
     const isNo = st==='노쇼';
     const isPend = st==='입금대기';
@@ -527,6 +562,7 @@ async function addRes(){
   fd.append('customer_name', $('f_name').value.trim());
   fd.append('people', $('f_people').value || '1');
   fd.append('platform', $('f_plat').value);
+  fd.append('payment_method', $('f_pay').value);
   fd.append('memo', $('f_memo').value.trim());
   fd.append('amount', $('f_amount').value || '0');
   const res = await fetch('api/reservations', {method:'POST', body:fd});
@@ -535,7 +571,7 @@ async function addRes(){
     alert('예약 추가 실패 ('+res.status+')\\n'+t.slice(0,500));
     return;
   }
-  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value='';
+  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value=''; $('f_pay').value='계좌이체';
   loadDay();
 }
 
@@ -589,6 +625,7 @@ function openEdit(id){
   $('e_name').value = r.customer_name || '';
   $('e_people').value = r.people || 1;
   $('e_plat').value = r.platform || CONFIG.platforms[0];
+  $('e_pay').value = r.payment_method || '계좌이체';
   $('e_memo').value = r.memo || '';
   $('e_amount').value = (Number(r.amount)||0) ? r.amount : '';
   $('editmodal').classList.add('show');
@@ -607,6 +644,7 @@ async function saveEdit(){
   fd.append('customer_name', $('e_name').value.trim());
   fd.append('people', $('e_people').value || '1');
   fd.append('platform', $('e_plat').value);
+  fd.append('payment_method', $('e_pay').value);
   fd.append('memo', $('e_memo').value.trim());
   fd.append('amount', $('e_amount').value || '0');
   const res = await fetch('api/reservations/update', {method:'POST', body:fd});
@@ -630,7 +668,7 @@ function openSeat(i){
   $('seat-sub').textContent = `예약 ${s.booked}/${s.capacity}명 · 잔여 ${s.remaining}명 (이름을 누르면 수정)`;
   const body = $('seat-body');
   body.innerHTML = rows.length ? rows.map(r=>{
-    const meta = [r.platform, r.memo].filter(Boolean).map(esc).join(' · ');
+    const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
     const amt = Number(r.amount)||0;
     return `<div class="res" onclick="closeSeat();openEdit(${r.id})" style="cursor:pointer">
       <div class="who">

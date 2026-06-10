@@ -301,7 +301,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .turn .savebar .ok { background:var(--accent); color:#fff; }
   .turn .savebar .cancel { background:var(--field); border:1px solid var(--line); color:var(--txt); }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
+
+  /* ===== 수입 분석 차트 ===== */
+  .kpirow { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center; box-shadow:var(--shadow); }
+  .kpi .k { color:var(--sub); font-size:13px; font-weight:600; margin-bottom:6px; }
+  .kpi .v { font-size:18px; font-weight:900; line-height:1.2; }
+  .kpi .v.up { color:var(--green); }
+  .kpi .v.dn { color:#dc2626; }
+  .chartrow { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:28px; }
+  .chartbox { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:var(--shadow); }
+  .chartbox .clabel { color:var(--sub); font-size:15px; font-weight:700; margin-bottom:14px; }
+  @media (min-width:700px){ .chartrow { grid-template-columns:3fr 2fr; } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <header>
@@ -346,6 +359,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
+  <h2>📊 수입 분석</h2>
+  <div class="kpirow">
+    <div class="kpi"><div class="k">이번 달 수입</div><div class="v" id="kpi-month">-</div></div>
+    <div class="kpi"><div class="k">전달 대비</div><div class="v" id="kpi-diff">-</div></div>
+    <div class="kpi"><div class="k">1인 평균 단가</div><div class="v" id="kpi-avg">-</div></div>
+  </div>
+  <div class="chartrow">
+    <div class="chartbox"><div class="clabel">📅 월별 수입 추이 (최근 6개월, 만원)</div><canvas id="monthChart"></canvas></div>
+    <div class="chartbox"><div class="clabel">🏄 종목별 수입 비율</div><canvas id="progChart"></canvas></div>
+  </div>
+
   <h2>🔔 예약 의향 고객</h2>
   <div id="intents"><div class="empty">불러오는 중...</div></div>
 
@@ -386,6 +410,78 @@ function toggleTheme(){
   const next = cur==='dark'?'light':'dark';
   try{ localStorage.setItem('dash_theme', next); }catch(e){}
   applyTheme(next);
+  if(window._resList) buildCharts(window._resList);
+}
+
+/* ===== 수입 분석 차트 ===== */
+let _mChart = null, _pChart = null;
+const PROG_COLORS = ['#2563eb','#7c3aed','#0d9488','#db2777','#d97706','#16a34a','#f59e0b','#64748b'];
+
+function buildCharts(list){
+  const ok = (list||[]).filter(r=>(r.status||'예약')==='예약');
+  const now = new Date();
+  const months = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push(d.toISOString().slice(0,7));
+  }
+  const mMap = {};
+  ok.forEach(r=>{ const m=(r.slot_date||'').slice(0,7); if(m) mMap[m]=(mMap[m]||0)+(Number(r.amount)||0); });
+
+  const thisM=months[5], lastM=months[4];
+  const thisAmt=mMap[thisM]||0, lastAmt=mMap[lastM]||0;
+  const diffPct = lastAmt>0 ? Math.round((thisAmt-lastAmt)/lastAmt*100) : null;
+  const totalPpl = ok.reduce((s,r)=>s+(Number(r.people)||0),0);
+  const totalAmt = ok.reduce((s,r)=>s+(Number(r.amount)||0),0);
+  const avgPer = totalPpl>0 ? Math.round(totalAmt/totalPpl) : 0;
+
+  document.getElementById('kpi-month').textContent = won(thisAmt);
+  const diffEl = document.getElementById('kpi-diff');
+  if(diffPct===null){ diffEl.textContent='-'; diffEl.className='v'; }
+  else { diffEl.textContent=(diffPct>=0?'▲ ':'▼ ')+Math.abs(diffPct)+'%'; diffEl.className='v '+(diffPct>0?'up':diffPct<0?'dn':''); }
+  document.getElementById('kpi-avg').textContent = avgPer>0 ? won(avgPer) : '-';
+
+  const byProg={};
+  ok.forEach(r=>{ const p=r.program||'기타'; byProg[p]=(byProg[p]||0)+(Number(r.amount)||0); });
+  const pLabels=Object.keys(byProg), pData=Object.values(byProg);
+
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const gridC = isDark?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)';
+  const txtC  = isDark?'#8b98a5':'#64748b';
+
+  if(typeof Chart==='undefined') return;
+  if(_mChart) _mChart.destroy();
+  _mChart = new Chart(document.getElementById('monthChart'),{
+    type:'bar',
+    data:{
+      labels: months.map(m=>m.slice(5)+'월'),
+      datasets:[{
+        data: months.map(m=>+(((mMap[m]||0)/10000).toFixed(1))),
+        backgroundColor: months.map((_,i)=>i===5?'#2563eb':'rgba(37,99,235,.28)'),
+        borderRadius:8, borderSkipped:false
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw+'만원'}}},
+      scales:{
+        y:{ticks:{color:txtC,callback:v=>v+'만'},grid:{color:gridC},beginAtZero:true},
+        x:{ticks:{color:txtC},grid:{display:false}}
+      }
+    }
+  });
+
+  if(_pChart) _pChart.destroy();
+  _pChart = pLabels.length ? new Chart(document.getElementById('progChart'),{
+    type:'doughnut',
+    data:{labels:pLabels, datasets:[{data:pData, backgroundColor:PROG_COLORS, borderWidth:2, borderColor:isDark?'#1a2129':'#fff'}]},
+    options:{
+      plugins:{
+        legend:{position:'bottom',labels:{color:txtC,font:{size:12},padding:10,boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>ctx.label+' · '+won(ctx.raw)}}
+      },
+      cutout:'62%'
+    }
+  }) : null;
 }
 (function(){ let t='light'; try{ t=localStorage.getItem('dash_theme')||'light'; }catch(e){} applyTheme(t); })();
 
@@ -407,6 +503,8 @@ async function loadAll(){
     window._convosAll = convos || [];
     window._resStats = resStats || {};
     window._resList = resList || [];
+
+    buildCharts(window._resList);
 
     document.getElementById('s-total').textContent = stats.total_conversations ?? 0;
     document.getElementById('s-today').textContent = stats.today_conversations ?? 0;
@@ -546,7 +644,7 @@ function convListHTML(rows){
 }
 function resRowHTML(r){
   const d = (r.slot_date||'').slice(5);
-  const meta = [r.platform, r.memo].filter(Boolean).map(esc).join(' · ');
+  const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
   const amt = Number(r.amount)||0;
   return `<div class="resrow">
     <div class="d"><div class="dd">${esc(d)||'-'}</div><div class="tt">${esc(r.time_slot)||''}</div></div>

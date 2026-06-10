@@ -36,6 +36,9 @@ CAPACITY = {p["key"]: p["capacity"] for p in PROGRAMS}
 # 예약 플랫폼 (사장님 입력용)
 PLATFORMS = ["네이버", "현장", "솜씨당", "탈잉", "클룩"]
 
+# 결제 수단 (사장님 입력용)
+PAYMENT_METHODS = ["계좌이체", "현장카드", "현금", "미수령"]
+
 
 def today_str() -> str:
     return datetime.now(KST).strftime("%Y-%m-%d")
@@ -71,9 +74,13 @@ async def add_reservation(
     platform: str = "현장",
     memo: str = "",
     amount: int = 0,
+    payment_method: str = "계좌이체",
 ) -> dict:
     """예약 1건 추가."""
     client = await get_supabase()
+    pay = (payment_method or "계좌이체").strip()
+    if pay not in PAYMENT_METHODS:
+        pay = "계좌이체"
     row = {
         "slot_date": date_str,
         "program": program,
@@ -83,6 +90,7 @@ async def add_reservation(
         "platform": (platform or "현장").strip(),
         "memo": (memo or "").strip(),
         "amount": _to_amount(amount),
+        "payment_method": pay,
     }
     res = await client.table("reservations").insert(row).execute()
     return (res.data or [{}])[0]
@@ -97,9 +105,13 @@ async def update_reservation(
     platform: str = "현장",
     memo: str = "",
     amount: int = 0,
+    payment_method: str = "계좌이체",
 ) -> dict:
     """예약 1건 수정 (날짜는 유지, 나머지 필드 갱신)."""
     client = await get_supabase()
+    pay = (payment_method or "계좌이체").strip()
+    if pay not in PAYMENT_METHODS:
+        pay = "계좌이체"
     patch = {
         "program": program,
         "time_slot": (time_slot or "").strip(),
@@ -108,6 +120,7 @@ async def update_reservation(
         "platform": (platform or "현장").strip(),
         "memo": (memo or "").strip(),
         "amount": _to_amount(amount),
+        "payment_method": pay,
     }
     res = (
         await client.table("reservations")
@@ -149,7 +162,7 @@ async def get_reservations(date_str: str) -> list[dict]:
     client = await get_supabase()
     res = (
         await client.table("reservations")
-        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status")
+        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method")
         .eq("slot_date", date_str)
         .order("time_slot")
         .order("id")
@@ -163,7 +176,7 @@ async def get_recent_reservations(limit: int = 200) -> list[dict]:
     client = await get_supabase()
     res = (
         await client.table("reservations")
-        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status")
+        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method")
         .order("slot_date", desc=True)
         .order("time_slot")
         .order("id", desc=True)
