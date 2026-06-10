@@ -1,14 +1,16 @@
 import httpx
 from app.config import settings
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
+
+KST = timezone(timedelta(hours=9))
 
 
 async def notify_owner(user_id: str, message: str):
     """예약 의향 감지 시 사장님 슬랙 알림"""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     payload = {
         "blocks": [
             {
@@ -33,6 +35,9 @@ async def notify_owner(user_id: str, message: str):
         ]
     }
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        response = await client.post(settings.slack_webhook_url, json=payload)
-        response.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(settings.slack_webhook_url, json=payload)
+            response.raise_for_status()
+    except Exception as e:
+        logger.warning(f"슬랙 알림 전송 실패: {e}")

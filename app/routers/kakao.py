@@ -32,6 +32,9 @@ async def kakao_webhook(request: Request):
         logger.warning(f"페이로드 파싱 실패(테스트 요청일 수 있음): {e}")
         return KakaoWebhookResponse.from_text("안녕하세요! 무엇을 도와드릴까요?")
 
+    # 지나치게 긴 메시지 자르기 (카카오 공식 한도 1,000자, 여유분 포함)
+    user_message = user_message[:1500]
+
     logger.info(f"[{user_id}] 메시지: {user_message}")
 
     # AI 응답 생성

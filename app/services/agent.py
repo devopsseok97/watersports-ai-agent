@@ -1,45 +1,85 @@
 import anthropic
 from app.config import settings
 from app.services.weather import get_operation_status
+from app.services.availability import build_availability_text, today_str
 
 # 업체별 설정 (나중에 DB로 이전)
 SHOP_CONFIG = {
     "default": {
-        "name": "포시즌카약패들보드윈드서핑",
-        "sports": ["윈드서핑", "패들보드", "카약", "e포일"],
+        "name": "서퍼스트",
+        "sports": ["패들보드", "카약", "윈드서핑", "전동e포일", "윙포일", "펌핑포일"],
         "prices": {
-            "카약": "3만원",
-            "패들보드": "3만원 (강습 추가 시 +2만원)",
-            "e포일": "15만원",
-            "윈드서핑": "12만원",
-            "패들보드 스냅사진 패키지": "12만원",
+            "데이패들보드 (2시간 체험, 정원 20명)": "렌탈 3만원 / 강습포함 5만원",
+            "선셋패들보드 (2시간 체험, 정원 20명)": "렌탈 3만원 / 강습포함 5만원",
+            "데이카약 (2시간 체험, 정원 40명)": "1인 3만원",
+            "선셋카약 (2시간 체험, 정원 40명)": "1인 3만원",
+            "윈드서핑 (3시간 체험, 정원 5명)": "렌탈 8만원 / 강습포함 12만원",
+            "전동e포일 (1시간 체험)": "렌탈 8만원 / 강습포함 15만원",
+            "윙포일 (3시간 체험, 정원 2명)": "렌탈 8만원 / 강습포함 15만원",
+            "펌핑포일 (2시간 체험)": "렌탈 7만원 / 강습포함 10만원",
         },
         "hours": """
-- 선라이즈 카약/패들보드: 05:10~07:10 (일출 시간에 따라 조정)
-- 데이 카약/패들보드: 10:00~12:00 / 13:00~15:00 / 15:00~17:00
-- 선셋 카약/패들보드 (평일): 17:30~19:30 (5월부터 18:00 시작, 일몰 시간에 따라 조정)
-- 선셋 카약/패들보드 (주말): 17:30~19:30 (5월부터 18:00 시작, 일몰 시간에 따라 조정)
+- 데이 패들보드/카약: 10:00 / 13:00 / 15:00 시작 (각 2시간)
+- 선셋 패들보드/카약: 18:30 시작 (일몰 시간에 따라 변동, 2시간)
+- 윈드서핑: 09:00 / 13:00 시작 (각 3시간)
+- 윙포일: 09:00 / 13:00 시작 (각 3시간)
+- 전동e포일: 시간 협의 후 예약 (1시간)
+- 펌핑포일: 시간 협의 후 예약 (2시간)
 - 화요일 휴무""",
-        "location": "서울 광진구 강변북로 2326 서울윈드서핑장 1번 포시즌",
+        "location": "서울 광진구 강변북로 2326 서울윈드서핑장 1번 서퍼스트",
         "contact": "010-6547-1067",
         "beginner_ok": True,
         "min_age": 6,
         "reservation_method": "네이버 스마트스토어 예약 또는 개인 연락(010-6547-1067) 가능합니다.",
+        "preparation": """- 공통 준비물: 여벌 옷, 수건
+- 휴대폰 방수팩: 직접 사진·영상 촬영을 원하시면 개인 방수팩을 꼭 지참해 주세요. (강사님들도 사진을 촬영해 드립니다!)
+- 패들보드/윈드서핑/포일류: 물에 빠질 수 있으니 물놀이 복장(젖어도 되는 옷)과 여벌 옷을 준비해 주세요.
+- 카약: 물에 빠지지 않으니 편한 복장이면 됩니다. 다만 엉덩이 쪽이 젖을 수 있어 갈아입을 여분의 바지를 추천드립니다. 카약은 간식을 챙겨 오셔서 드셔도 됩니다.
+- 분실 주의: 물에 휴대폰 등을 빠뜨릴 위험이 있으며, 분실 시 책임지지 않습니다. 귀중품은 보관 후 이용해 주세요.
+- 도착 시간: 손님이 많아 현장이 복잡할 수 있으니, 예약 시간 30분 전 여유 있게 도착하시길 추천드립니다.""",
     }
 }
 
 # 사용자별 대화 기록 (메모리, 나중에 Redis로 이전 가능)
 conversation_history: dict[str, list[dict]] = {}
-MAX_HISTORY = 10  # 최근 10턴 유지
+MAX_HISTORY = 10   # 유저당 최근 N턴 유지
+MAX_USERS = 5000   # 메모리 보호: 최대 보관 유저 수
 
 
-def build_system_prompt(shop_key: str = "default", weather_status: str = "") -> str:
+def build_system_prompt(
+    shop_key: str = "default", weather_status: str = "", availability_status: str = ""
+) -> str:
     shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
     prices_text = "\n".join([f"  - {k}: {v}" for k, v in shop["prices"].items()])
 
     return f"""당신은 {shop['name']}의 AI 고객 상담 직원입니다.
-친절하고 간결하게 답변하세요. 답변은 3-4문장 이내로 유지하세요.
+친절하고 간결하게 답변하세요. 핵심만 담아 너무 길지 않게 답하세요.
 당신은 24시간 응답 가능한 AI입니다. 운영시간은 현장 운영 시간이며, 시간과 관계없이 항상 문의에 답변하세요.
+오늘 날짜는 {today_str()} (KST)입니다. "내일", "이번 주말" 등은 이 날짜를 기준으로 계산하세요.
+
+[답변 형식 - 가독성 매우 중요]
+★ 카카오톡은 굵은 글씨·마크다운(**별표**, #, 등)이 표시되지 않습니다.
+  별표(**)를 쓰면 손님 화면에 별표가 그대로 보여 지저분합니다. 절대 사용하지 마세요.
+강조하고 싶을 땐 별표 대신 이모지 라벨과 줄바꿈으로 표현하세요.
+
+작성 규칙:
+1. 한 문장이 끝나면 줄바꿈(엔터)을 넣어 한 줄에 한 내용만 보이게 하세요.
+2. 가격·시간·장소 등 항목이 여러 개면 한 줄에 하나씩, 앞에 관련 이모지를 붙이세요.
+   (📍 장소 / ⏰ 시간 / 💰 비용 / 👕 준비물 / 🛶 종목 등)
+3. 내용 묶음이 바뀌면 빈 줄(엔터 두 번)로 문단을 구분하세요.
+4. 첫 인사와 마무리 한마디는 짧고 친근하게, 이모지를 가볍게 곁들이세요 (과하지 않게).
+
+[좋은 답변 예시]
+안녕하세요! 서퍼스트입니다 🏄‍♂️
+
+데이패들보드 안내드릴게요!
+
+💰 비용: 렌탈 3만원 / 강습포함 5만원 (1인)
+⏰ 시간: 10:00 / 13:00 / 15:00 (2시간 체험)
+👕 준비물: 물놀이 복장 (여벌 옷·수건 추천)
+
+초보자도 충분히 즐기실 수 있어요!
+예약은 네이버 스마트스토어 또는 전화(010-6547-1067)로 가능합니다 😊
 
 [업체 정보]
 - 종목: {', '.join(shop['sports'])}
@@ -55,11 +95,18 @@ def build_system_prompt(shop_key: str = "default", weather_status: str = "") -> 
 [예약 방법]
 {shop['reservation_method']}
 
+[준비물 및 안내사항]
+{shop.get('preparation', '')}
+
 [오늘 날씨/운영 상태]
 {weather_status if weather_status else '운영 중입니다.'}
 
+[예약 가능 현황 (마감된 타임만 표시)]
+{availability_status if availability_status else '실시간 현황은 전화로 확인해 주세요.'}
+
 [주의사항]
 - 모르는 정보는 "정확한 내용은 전화로 문의해 주세요 📞 {shop['contact']}"라고 안내하세요.
+- 자리 문의 시: 위 '예약 가능 현황'의 잔여 좌석을 그대로 안내하세요. 마감이면 마감, "N자리 남음"이면 그 숫자로 안내. 현황에 없는 종목·시간대는 "예약 가능합니다"라고 안내하세요. 단, 표시된 숫자 외에 임의의 인원수를 지어내지 말고, 마감이 임박하면 빠른 예약을 권하세요.
 - 욕설, 광고, 비상업적 대화에는 정중히 거절하세요.
 - 예약 확정은 직접 하지 말고 사장님 확인 후 안내 예정이라고 하세요.
 """
@@ -73,8 +120,19 @@ class AgentService:
         # 날씨 기반 운영 상태 조회
         weather_status = await get_operation_status()
 
+        # 예약 가능 현황 (마감 슬롯 요약)
+        try:
+            availability_status = await build_availability_text()
+        except Exception:
+            availability_status = ""
+
         # 대화 기록 초기화
         if user_id not in conversation_history:
+            # 유저 수 한도 초과 시 가장 오래된 유저부터 제거
+            if len(conversation_history) >= MAX_USERS:
+                oldest_keys = list(conversation_history.keys())[:MAX_USERS // 10]
+                for k in oldest_keys:
+                    del conversation_history[k]
             conversation_history[user_id] = []
 
         # 대화 기록에 사용자 메시지 추가
@@ -86,8 +144,8 @@ class AgentService:
         try:
             response = await self.client.messages.create(
                 model="claude-haiku-4-5-20251001",  # 빠르고 저렴
-                max_tokens=300,
-                system=build_system_prompt(shop_key, weather_status),
+                max_tokens=700,
+                system=build_system_prompt(shop_key, weather_status, availability_status),
                 messages=history,
             )
             reply = response.content[0].text
