@@ -31,6 +31,12 @@ SHOP_CONFIG = {
         "beginner_ok": True,
         "min_age": 6,
         "reservation_method": "네이버 스마트스토어 예약 또는 개인 연락(010-6547-1067) 가능합니다.",
+        "smartstore_links": {
+            "패들보드/카약": "https://smartstore.naver.com/fourseason_1/products/8356965224",
+            "전동e포일":     "https://smartstore.naver.com/fourseason_1/products/10160039912",
+            "스냅사진":      "https://smartstore.naver.com/fourseason_1/products/12109263589",
+            "윈드서핑":      "https://smartstore.naver.com/fourseason_1/products/8357062775",
+        },
         "preparation": """- 공통 준비물: 여벌 옷, 수건
 - 휴대폰 방수팩: 직접 사진·영상 촬영을 원하시면 개인 방수팩을 꼭 지참해 주세요. (강사님들도 사진을 촬영해 드립니다!)
 - 패들보드/윈드서핑/포일류: 물에 빠질 수 있으니 물놀이 복장(젖어도 되는 옷)과 여벌 옷을 준비해 주세요.
@@ -51,6 +57,8 @@ def build_system_prompt(
 ) -> str:
     shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
     prices_text = "\n".join([f"  - {k}: {v}" for k, v in shop["prices"].items()])
+    links = shop.get("smartstore_links", {})
+    smartstore_text = "\n".join([f"  - {k}: {v}" for k, v in links.items()])
 
     return f"""당신은 {shop['name']}의 AI 고객 상담 직원입니다.
 친절하고 간결하게 답변하세요. 핵심만 담아 너무 길지 않게 답하세요.
@@ -103,6 +111,19 @@ def build_system_prompt(
 
 [예약 가능 현황 (마감된 타임만 표시)]
 {availability_status if availability_status else '실시간 현황은 전화로 확인해 주세요.'}
+
+[네이버 스마트스토어 결제 링크]
+결제·예약을 원하는 손님에게는 아래 해당 링크를 안내하세요.
+구매 후 리뷰 작성도 꼭 부탁드리세요 (리뷰가 많을수록 다른 손님에게 도움이 돼요!).
+{smartstore_text}
+  - 윙포일/펌핑포일: 링크 없음 → 전화 예약 안내 (010-6547-1067)
+
+결제 링크 안내 규칙:
+- 손님이 "결제하고 싶다", "예약하려고 한다", "어떻게 신청하나요" 등 결제·예약 의향을 보이면 해당 종목 링크를 바로 제공하세요.
+- 링크는 그대로 붙여넣기하여 클릭 가능하게 안내하세요.
+- 리뷰 부탁 멘트는 자연스럽게 한 줄만 (예: "이용 후 리뷰도 남겨주시면 감사해요 😊").
+- 여러 종목을 함께 예약하려는 경우 각 종목 링크를 모두 안내하세요.
+- 스냅사진 링크는 사진 촬영 서비스를 원하는 손님에게 안내하세요.
 
 [주의사항]
 - 모르는 정보는 "정확한 내용은 전화로 문의해 주세요 📞 {shop['contact']}"라고 안내하세요.
