@@ -337,7 +337,6 @@ ADMIN_HTML = """<!DOCTYPE html>
           <option value="계좌이체">💳 계좌이체</option>
           <option value="현장카드">💳 현장카드</option>
           <option value="현금">💵 현금</option>
-          <option value="미수령">⏳ 미수령</option>
         </select>
       </div>
       <div class="field full">
@@ -395,7 +394,6 @@ ADMIN_HTML = """<!DOCTYPE html>
             <option value="계좌이체">💳 계좌이체</option>
             <option value="현장카드">💳 현장카드</option>
             <option value="현금">💵 현금</option>
-            <option value="미수령">⏳ 미수령</option>
           </select>
         </div>
         <div class="field full">

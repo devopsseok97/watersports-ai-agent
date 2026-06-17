@@ -37,7 +37,7 @@ CAPACITY = {p["key"]: p["capacity"] for p in PROGRAMS}
 PLATFORMS = ["네이버", "현장", "솜씨당", "탈잉", "클룩"]
 
 # 결제 수단 (사장님 입력용)
-PAYMENT_METHODS = ["계좌이체", "현장카드", "현금", "미수령"]
+PAYMENT_METHODS = ["계좌이체", "현장카드", "현금"]
 
 
 def today_str() -> str:
