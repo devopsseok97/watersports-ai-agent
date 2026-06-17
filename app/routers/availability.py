@@ -106,7 +106,11 @@ async def availability_admin(_=Depends(require_admin)):
 ADMIN_HTML = """<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1419" media="(prefers-color-scheme: dark)">
 <title>예약 관리</title>
 <style>
   /* ===== 라이트(기본) ===== */
@@ -240,10 +244,21 @@ ADMIN_HTML = """<!DOCTYPE html>
   /* ===== 모바일 ===== */
   @media (max-width:560px){
     body { font-size:17px; }
-    main { padding:14px; }
+    main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
     .form { grid-template-columns:1fr; }
     .sumgrid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
     .res .who .nm { font-size:17px; }
+    /* 예약 카드: 액션 버튼을 두 번째 줄로 */
+    .res { flex-wrap:wrap; gap:6px; }
+    .res .acts {
+      width:100%; border-top:1px solid var(--line);
+      padding-top:8px; justify-content:flex-end; gap:0;
+    }
+    .res .edit, .res .del, .res .noshow-btn,
+    .res .undo, .res .pend-btn, .res .confirm-btn {
+      min-width:48px; min-height:48px; font-size:24px;
+      display:flex; align-items:center; justify-content:center;
+    }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style></head>

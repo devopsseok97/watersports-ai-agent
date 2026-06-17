@@ -160,7 +160,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1419" media="(prefers-color-scheme: dark)">
 <title>서퍼스트 관리자 · 홈</title>
 <style>
   :root {
@@ -216,6 +220,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .stat.clickable:hover { border-color:var(--accent); }
   .stat.clickable:active { transform:scale(.98); }
   @media (min-width:760px){ .cards { grid-template-columns:repeat(6,1fr); } }
+
+  /* ===== 모바일 ===== */
+  @media (max-width:560px){
+    main { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+    /* 수입분석 KPI 3열 → 2열+1열 */
+    .kpirow { grid-template-columns:repeat(2,1fr); }
+    .kpirow .kpi:last-child { grid-column:1 / -1; }
+    /* 수입 요약 박스 3열 → 2열 */
+    .revbox { grid-template-columns:repeat(2,1fr); }
+    .revbox .b:last-child { grid-column:1 / -1; }
+  }
 
   /* ===== 카드 상세: 수입 요약 박스 ===== */
   .revbox { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
