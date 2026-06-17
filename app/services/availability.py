@@ -24,7 +24,7 @@ PROGRAMS = [
     {"key": "데이카약", "slots": ["10:00", "13:00", "15:00"], "capacity": 40},
     {"key": "선셋카약", "slots": ["18:30"], "capacity": 40},
     {"key": "윈드서핑", "slots": ["09:00", "13:00"], "capacity": 5},
-    {"key": "윙포일", "slots": ["09:00", "13:00"], "capacity": 2},
+    {"key": "E포일", "slots": ["09:00", "13:00"], "capacity": 2},
     # 시간 협의 종목: 정해진 슬롯 없음(시간 직접 입력). 정원 관리 대상 아님.
     {"key": "전동e포일", "slots": [], "capacity": None, "note": "시간 협의 후 예약"},
     {"key": "펌핑포일", "slots": [], "capacity": None, "note": "시간 협의 후 예약"},
