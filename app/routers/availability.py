@@ -53,10 +53,11 @@ async def post_reservation(
     memo: str = Form(""),
     amount: str = Form("0"),
     payment_method: str = Form("계좌이체"),
+    deposit_amount: str = Form("0"),
     _=Depends(require_admin),
 ):
     row = await av.add_reservation(
-        date, program, time_slot, customer_name, people, platform, memo, amount, payment_method
+        date, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount
     )
     return {"ok": True, "reservation": row}
 
@@ -72,10 +73,11 @@ async def update_reservation(
     memo: str = Form(""),
     amount: str = Form("0"),
     payment_method: str = Form("계좌이체"),
+    deposit_amount: str = Form("0"),
     _=Depends(require_admin),
 ):
     row = await av.update_reservation(
-        id, program, time_slot, customer_name, people, platform, memo, amount, payment_method
+        id, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount
     )
     return {"ok": True, "reservation": row}
 
@@ -228,6 +230,9 @@ ADMIN_HTML = """<!DOCTYPE html>
   .res.noshow .nm { text-decoration:line-through; }
   /* 입금대기(가예약): 노란 좌측 강조 */
   .res.pending { border-left:4px solid #f59e0b; background:rgba(245,158,11,.06); }
+  /* 예약금 납부: 초록 좌측 강조 */
+  .res.deposited { border-left:4px solid #10b981; background:rgba(16,185,129,.06); }
+  .res .dep { font-size:13px; font-weight:700; color:#10b981; margin-top:3px; }
   .nobadge { display:inline-block; font-size:12px; font-weight:800; color:#fff; background:var(--full);
              padding:2px 7px; border-radius:6px; margin-left:6px; vertical-align:middle; text-decoration:none; }
   .pendbadge { display:inline-block; font-size:12px; font-weight:800; color:#fff; background:#f59e0b;
@@ -339,7 +344,11 @@ ADMIN_HTML = """<!DOCTYPE html>
           <option value="현금">💵 현금</option>
         </select>
       </div>
-      <div class="field full">
+      <div class="field">
+        <label>예약금 (원)</label>
+        <input id="f_deposit" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 20000">
+      </div>
+      <div class="field">
         <label>실수령 금액 (원) <span id="price-hint" style="color:var(--accent);font-weight:600;font-size:13px;margin-left:6px;"></span></label>
         <input id="f_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
       </div>
@@ -396,7 +405,11 @@ ADMIN_HTML = """<!DOCTYPE html>
             <option value="현금">💵 현금</option>
           </select>
         </div>
-        <div class="field full">
+        <div class="field">
+          <label>예약금 (원)</label>
+          <input id="e_deposit" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 20000">
+        </div>
+        <div class="field">
           <label>실수령 금액 (원)</label>
           <input id="e_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
         </div>
@@ -546,7 +559,9 @@ function renderList(rows){
     const isNo = st==='노쇼';
     const isPend = st==='입금대기';
     const amt = Number(r.amount)||0; if(st==='예약') sumAmt += amt;
-    const cls = isNo ? ' noshow' : (isPend ? ' pending' : '');
+    const dep = Number(r.deposit_amount)||0;
+    const hasDeposit = dep > 0;
+    const cls = isNo ? ' noshow' : (isPend ? ' pending' : (hasDeposit ? ' deposited' : ''));
     let badge = '';
     if(isNo) badge = ' <span class="nobadge">노쇼</span>';
     else if(isPend) badge = ' <span class="pendbadge">입금대기</span>';
@@ -570,7 +585,7 @@ function renderList(rows){
         <div class="nm">${esc(r.customer_name)||'(이름없음)'}${badge}</div>
         ${meta?`<div class="meta">${meta}</div>`:''}
       </div>
-      <div class="ppl">${r.people}<small>명</small>${amt>0?`<div class="amt">${amt.toLocaleString('ko-KR')}원</div>`:''}</div>
+      <div class="ppl">${r.people}<small>명</small>${amt>0?`<div class="amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</div>
       <div class="acts">
         ${acts}
         <button class="edit" onclick="openEdit(${r.id})" title="수정">✏️</button>
@@ -590,6 +605,7 @@ async function addRes(){
   fd.append('people', $('f_people').value || '1');
   fd.append('platform', $('f_plat').value);
   fd.append('payment_method', $('f_pay').value);
+  fd.append('deposit_amount', $('f_deposit').value || '0');
   fd.append('memo', $('f_memo').value.trim());
   fd.append('amount', $('f_amount').value || '0');
   const res = await fetch('api/reservations', {method:'POST', body:fd});
@@ -598,7 +614,7 @@ async function addRes(){
     alert('예약 추가 실패 ('+res.status+')\\n'+t.slice(0,500));
     return;
   }
-  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value=''; $('f_pay').value='계좌이체';
+  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value=''; $('f_deposit').value=''; $('f_pay').value='계좌이체';
   loadDay();
 }
 
@@ -653,6 +669,7 @@ function openEdit(id){
   $('e_people').value = r.people || 1;
   $('e_plat').value = r.platform || CONFIG.platforms[0];
   $('e_pay').value = r.payment_method || '계좌이체';
+  $('e_deposit').value = (Number(r.deposit_amount)||0) ? r.deposit_amount : '';
   $('e_memo').value = r.memo || '';
   $('e_amount').value = (Number(r.amount)||0) ? r.amount : '';
   $('editmodal').classList.add('show');
@@ -672,6 +689,7 @@ async function saveEdit(){
   fd.append('people', $('e_people').value || '1');
   fd.append('platform', $('e_plat').value);
   fd.append('payment_method', $('e_pay').value);
+  fd.append('deposit_amount', $('e_deposit').value || '0');
   fd.append('memo', $('e_memo').value.trim());
   fd.append('amount', $('e_amount').value || '0');
   const res = await fetch('api/reservations/update', {method:'POST', body:fd});

@@ -75,6 +75,7 @@ async def add_reservation(
     memo: str = "",
     amount: int = 0,
     payment_method: str = "계좌이체",
+    deposit_amount: int = 0,
 ) -> dict:
     """예약 1건 추가."""
     client = await get_supabase()
@@ -91,6 +92,7 @@ async def add_reservation(
         "memo": (memo or "").strip(),
         "amount": _to_amount(amount),
         "payment_method": pay,
+        "deposit_amount": _to_amount(deposit_amount),
     }
     res = await client.table("reservations").insert(row).execute()
     return (res.data or [{}])[0]
@@ -106,6 +108,7 @@ async def update_reservation(
     memo: str = "",
     amount: int = 0,
     payment_method: str = "계좌이체",
+    deposit_amount: int = 0,
 ) -> dict:
     """예약 1건 수정 (날짜는 유지, 나머지 필드 갱신)."""
     client = await get_supabase()
@@ -121,6 +124,7 @@ async def update_reservation(
         "memo": (memo or "").strip(),
         "amount": _to_amount(amount),
         "payment_method": pay,
+        "deposit_amount": _to_amount(deposit_amount),
     }
     res = (
         await client.table("reservations")
@@ -162,7 +166,7 @@ async def get_reservations(date_str: str) -> list[dict]:
     client = await get_supabase()
     res = (
         await client.table("reservations")
-        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method")
+        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method,deposit_amount")
         .eq("slot_date", date_str)
         .order("time_slot")
         .order("id")
@@ -176,7 +180,7 @@ async def get_recent_reservations(limit: int = 200) -> list[dict]:
     client = await get_supabase()
     res = (
         await client.table("reservations")
-        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method")
+        .select("id,slot_date,program,time_slot,customer_name,people,platform,memo,amount,status,payment_method,deposit_amount")
         .order("slot_date", desc=True)
         .order("time_slot")
         .order("id", desc=True)
