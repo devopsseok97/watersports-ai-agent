@@ -8,10 +8,11 @@
 """
 import logging
 import re
-from fastapi import APIRouter, Depends, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.routers.admin import require_admin
+from app.services.auth import verify_session
 from app.services import availability as av
 
 PAY_OPTS = av.PAYMENT_METHODS
@@ -99,7 +100,9 @@ async def set_status(
 
 
 @router.get("/admin", response_class=HTMLResponse)
-async def availability_admin(_=Depends(require_admin)):
+async def availability_admin(asess: str | None = Cookie(default=None)):
+    if not verify_session(asess):
+        return RedirectResponse(url="/admin/login", status_code=302)
     return HTMLResponse(ADMIN_HTML)
 
 
@@ -110,33 +113,41 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1419" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <title>예약 관리</title>
 <style>
-  /* ===== 라이트(기본) ===== */
   :root {
-    --bg:#f4f6f9; --card:#ffffff; --line:#e2e8f0; --txt:#1a2129; --sub:#64748b;
-    --ok:#16a34a; --ok-bg:#dcfce7; --full:#dc2626; --full-bg:#fee2e2;
-    --warn:#d97706; --warn-bg:#fef3c7; --accent:#2563eb; --accent-press:#1d4ed8;
-    --field:#f8fafc; --shadow:0 1px 3px rgba(0,0,0,.08);
+    --bg:#f6f8fa; --card:#ffffff; --line:#d0d7de; --txt:#1f2328; --sub:#57606a;
+    --ok:#1a7f4f; --ok-bg:#dafbe1; --full:#d1242f; --full-bg:#ffebe9;
+    --warn:#9a6700; --warn-bg:#fff8c5; --accent:#6366f1; --accent-press:#4f46e5;
+    --field:#f6f8fa; --shadow:0 1px 3px rgba(0,0,0,.08);
+    --header-bg:rgba(255,255,255,.92);
   }
-  /* ===== 다크 ===== */
   [data-theme="dark"] {
-    --bg:#0f1419; --card:#1a2129; --line:#2a3441; --txt:#e6edf3; --sub:#8b98a5;
-    --ok:#3fb950; --ok-bg:#13351c; --full:#f85149; --full-bg:#3a1413;
-    --warn:#f0883e; --warn-bg:#3a2812; --accent:#2f81f7; --accent-press:#1f6feb;
-    --field:#0f1419; --shadow:none;
+    --bg:#09090d; --card:#111116; --line:#1e2028; --txt:#e4e7ef; --sub:#6b7280;
+    --ok:#34d399; --ok-bg:#06190e; --full:#f87171; --full-bg:#1a0606;
+    --warn:#fbbf24; --warn-bg:#1c1500; --accent:#818cf8; --accent-press:#6366f1;
+    --field:#0d0f14; --shadow:none;
+    --header-bg:rgba(9,9,13,.85);
   }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
          background:var(--bg); color:var(--txt); font-size:17px; line-height:1.45; }
-  header { background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
-  .htop { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  header { background:var(--header-bg); backdrop-filter:saturate(180%) blur(12px);
+           -webkit-backdrop-filter:saturate(180%) blur(12px);
+           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+  .htop { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .brand { font-size:19px; font-weight:800; }
   .brand span { color:var(--sub); font-weight:600; font-size:14px; margin-left:4px; }
+  .htools { display:flex; align-items:center; gap:6px; }
   .themebtn { background:var(--field); border:1px solid var(--line); color:var(--txt);
-              width:42px; height:42px; border-radius:10px; cursor:pointer; font-size:20px; padding:0; }
+              width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:19px; padding:0;
+              display:flex; align-items:center; justify-content:center; }
+  .logoutbtn { color:var(--sub); font-size:13px; font-weight:600; text-decoration:none;
+               padding:9px 12px; border-radius:10px; background:var(--field);
+               border:1px solid var(--line); white-space:nowrap; }
+  .logoutbtn:hover { color:var(--txt); }
   nav { display:flex; gap:6px; padding:0 12px 12px; overflow-x:auto; }
   nav a { flex:1; text-align:center; white-space:nowrap; text-decoration:none; color:var(--sub);
           font-size:16px; font-weight:700; padding:11px 10px; border-radius:10px; background:var(--field); border:1px solid var(--line); }
@@ -266,7 +277,10 @@ ADMIN_HTML = """<!DOCTYPE html>
 <header>
   <div class="htop">
     <div class="brand">🏄 서퍼스트<span>관리자</span></div>
-    <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
+    <div class="htools">
+      <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
+      <a href="/admin/logout" class="logoutbtn">로그아웃</a>
+    </div>
   </div>
   <nav>
     <a href="/admin/">🏠 홈</a>
