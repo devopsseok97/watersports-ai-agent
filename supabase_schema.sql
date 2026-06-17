@@ -60,3 +60,38 @@ ALTER TABLE conversations ADD COLUMN IF NOT EXISTS admin_memo        TEXT    NOT
 
 -- reservations 에 결제수단 컬럼 추가
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT '계좌이체';
+
+
+-- ================================================================
+--  5. RLS (Row Level Security) 활성화 및 정책
+--  Supabase SQL Editor 에서 아래 구문 전체 실행
+-- ================================================================
+
+-- RLS 활성화
+ALTER TABLE conversations  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservations   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE photo_albums   ENABLE ROW LEVEL SECURITY;
+
+-- conversations: service_role(백엔드 서버)만 읽기·쓰기 허용
+CREATE POLICY "service_role_only_conversations"
+  ON conversations
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- reservations: service_role(백엔드 서버)만 읽기·쓰기 허용
+CREATE POLICY "service_role_only_reservations"
+  ON reservations
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- photo_albums: service_role(백엔드 서버)만 읽기·쓰기 허용
+CREATE POLICY "service_role_only_photo_albums"
+  ON photo_albums
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);

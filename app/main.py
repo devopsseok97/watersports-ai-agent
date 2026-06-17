@@ -1,9 +1,7 @@
 import logging
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.routers import kakao, health, admin, photos, availability
 from app.config import settings
@@ -24,8 +22,3 @@ app.include_router(kakao.router, prefix="/kakao")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(photos.router, prefix="/photos")
 app.include_router(availability.router, prefix="/availability")
-
-# 사진 파일 정적 서빙 (photo_storage/{code}/{file} → /media/{code}/{file})
-PHOTO_ROOT = Path(__file__).resolve().parents[1] / "photo_storage"
-PHOTO_ROOT.mkdir(exist_ok=True)
-app.mount("/media", StaticFiles(directory=str(PHOTO_ROOT)), name="media")

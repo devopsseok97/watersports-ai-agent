@@ -6,8 +6,8 @@
 3) 사장님이 해당 앨범에 사진 업로드 (드래그 업로드)
 4) 7일 후 자동 만료 (album.is_expired)
 
-사진 파일 자체는 서버 로컬 폴더(photo_storage/{code}/)에 저장.
-앨범 메타데이터(코드/메모/사진수/만료일)만 Supabase에 기록.
+사진 파일은 Supabase Storage 버킷 "photos"에 저장.
+앨범 메타데이터(코드/메모/사진수/만료일)는 Supabase DB에 기록.
 """
 import html as _html
 import io
@@ -18,48 +18,56 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi import Request
 
 from app.routers.admin import require_admin
 from app.services import album
+from app.services.db import get_supabase
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 프로젝트 루트/photo_storage  (app/routers/photos.py → parents[2] = 프로젝트 루트)
-PHOTO_ROOT = Path(__file__).resolve().parents[2] / "photo_storage"
-PHOTO_ROOT.mkdir(exist_ok=True)
+STORAGE_BUCKET = "photos"
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".heic", ".webp", ".gif"}
+MIME_MAP = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".png": "image/png", ".heic": "image/heic",
+    ".webp": "image/webp", ".gif": "image/gif",
+}
 
-# album.py 의 _ALPHABET 과 동일: 대문자 + 2-9, 헷갈리는 문자 제외
 _VALID_CODE_RE = re.compile(r"^[A-HJ-NP-Z2-9]{6}$")
 
 
 def _check_code(code: str) -> None:
-    """코드가 유효한 형식인지 검증 (Path Traversal 방지)."""
     if not _VALID_CODE_RE.match(code):
         raise HTTPException(400, "잘못된 앨범 코드입니다.")
 
 
-def _album_dir(code: str) -> Path:
+async def _storage_list(code: str) -> list[str]:
+    """Supabase Storage에서 앨범 폴더의 파일명 목록 반환."""
     _check_code(code)
-    d = (PHOTO_ROOT / code).resolve()
-    if not str(d).startswith(str(PHOTO_ROOT.resolve())):
-        raise HTTPException(400, "잘못된 경로입니다.")
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-def _list_files(code: str) -> list[str]:
-    _check_code(code)
-    d = PHOTO_ROOT / code
-    if not d.exists():
+    client = await get_supabase()
+    try:
+        items = await client.storage.from_(STORAGE_BUCKET).list(path=code)
+        names = []
+        for item in (items or []):
+            name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
+            if name:
+                names.append(name)
+        names.sort()
+        return names
+    except Exception as e:
+        logger.error(f"Storage list 실패 [{code}]: {e}")
         return []
-    files = [f.name for f in d.iterdir() if f.is_file()]
-    files.sort()
-    return files
+
+
+async def _public_url(client, code: str, filename: str) -> str:
+    result = client.storage.from_(STORAGE_BUCKET).get_public_url(f"{code}/{filename}")
+    if hasattr(result, "__await__"):
+        result = await result
+    return result
 
 
 # ---------------- 관리자 API ----------------
@@ -67,7 +75,6 @@ def _list_files(code: str) -> list[str]:
 @router.post("/api/albums")
 async def create_album_api(memo: str = Form(""), _=Depends(require_admin)):
     al = await album.create_album(memo)
-    _album_dir(al["code"])
     return al
 
 
@@ -81,24 +88,36 @@ async def upload_photos(
     if not al:
         raise HTTPException(404, "앨범을 찾을 수 없습니다.")
 
-    d = _album_dir(code)
+    _check_code(code)
+    client = await get_supabase()
     saved = 0
     KST = timezone(timedelta(hours=9))
+
     for f in files:
         ext = Path(f.filename or "").suffix.lower()
         if ext not in ALLOWED_EXT:
             continue
-        # 타임스탬프 + 랜덤 접미사로 동시 업로드 시 충돌 방지
         ts = datetime.now(KST).strftime("%Y%m%d_%H%M%S_%f")
         rand = secrets.token_hex(3)
-        dest = d / f"{ts}_{rand}{ext}"
-        with open(dest, "wb") as out:
-            out.write(await f.read())
-        saved += 1
+        filename = f"{ts}_{rand}{ext}"
+        data = await f.read()
+        try:
+            await client.storage.from_(STORAGE_BUCKET).upload(
+                path=f"{code}/{filename}",
+                file=data,
+                file_options={
+                    "content-type": MIME_MAP.get(ext, "image/jpeg"),
+                    "cache-control": "3600",
+                    "upsert": "false",
+                },
+            )
+            saved += 1
+        except Exception as e:
+            logger.error(f"Storage upload 실패 [{code}/{filename}]: {e}")
 
-    count = len(_list_files(code))
-    await album.set_photo_count(code, count)
-    return {"saved": saved, "photo_count": count}
+    names = await _storage_list(code)
+    await album.set_photo_count(code, len(names))
+    return {"saved": saved, "photo_count": len(names)}
 
 
 @router.get("/api/albums")
@@ -111,21 +130,24 @@ async def list_albums_api(_=Depends(require_admin)):
 
 @router.get("/api/albums/{code}/photos")
 async def list_photos_api(code: str, _=Depends(require_admin)):
-    return _list_files(code)
+    return await _storage_list(code)
 
 
 @router.delete("/api/albums/{code}/photos/{filename}")
 async def delete_photo_api(code: str, filename: str, _=Depends(require_admin)):
-    # 경로 탐색 방지
     if "/" in filename or "\\" in filename or ".." in filename:
         raise HTTPException(400, "잘못된 파일명입니다.")
-    f = PHOTO_ROOT / code / filename
-    if not f.exists():
-        raise HTTPException(404, "파일을 찾을 수 없습니다.")
-    f.unlink()
-    count = len(_list_files(code))
-    await album.set_photo_count(code, count)
-    return {"deleted": filename, "photo_count": count}
+    _check_code(code)
+    client = await get_supabase()
+    try:
+        await client.storage.from_(STORAGE_BUCKET).remove([f"{code}/{filename}"])
+    except Exception as e:
+        logger.error(f"Storage delete 실패 [{code}/{filename}]: {e}")
+        raise HTTPException(500, "파일 삭제 실패")
+
+    names = await _storage_list(code)
+    await album.set_photo_count(code, len(names))
+    return {"deleted": filename, "photo_count": len(names)}
 
 
 @router.delete("/api/albums/{code}")
@@ -133,23 +155,39 @@ async def delete_album_api(code: str, _=Depends(require_admin)):
     al = await album.get_album(code)
     if not al:
         raise HTTPException(404, "앨범을 찾을 수 없습니다.")
-    import shutil
-    d = PHOTO_ROOT / code
-    if d.exists():
-        shutil.rmtree(d)
+
+    _check_code(code)
+    client = await get_supabase()
+    names = await _storage_list(code)
+    if names:
+        paths = [f"{code}/{n}" for n in names]
+        try:
+            await client.storage.from_(STORAGE_BUCKET).remove(paths)
+        except Exception as e:
+            logger.error(f"Storage 폴더 삭제 실패 [{code}]: {e}")
+
     await album.delete_album(code)
     return {"deleted": code}
 
 
+@router.get("/thumb/{code}/{filename}")
+async def thumb_redirect(code: str, filename: str):
+    """관리자 페이지 썸네일용 — Supabase Storage 공개 URL로 리다이렉트."""
+    _check_code(code)
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(400, "잘못된 파일명입니다.")
+    client = await get_supabase()
+    url = await _public_url(client, code, filename)
+    return RedirectResponse(url=url, status_code=302)
+
+
 @router.get("/qr/{code}.png")
 async def qr_png(code: str, request: Request):
-    """앨범 공개 URL을 담은 QR 코드 PNG."""
     try:
         import qrcode
     except ImportError:
         raise HTTPException(500, "qrcode 라이브러리가 설치되지 않았습니다.")
 
-    # ngrok/배포 도메인 기준 공개 URL
     base = str(request.base_url).rstrip("/")
     url = f"{base}/photos/p/{code}"
     img = qrcode.make(url)
@@ -162,24 +200,26 @@ async def qr_png(code: str, request: Request):
 # ---------------- 공개 갤러리 (손님용) ----------------
 
 @router.get("/p/{code}", response_class=HTMLResponse)
-async def public_gallery(code: str, request: Request):
+async def public_gallery(code: str):
     al = await album.get_album(code)
     if not al:
         return HTMLResponse(_simple_page("앨범을 찾을 수 없어요", "코드를 다시 확인해 주세요."), status_code=404)
     if album.is_expired(al):
         return HTMLResponse(_simple_page("앨범이 만료되었어요 ⏰", "사진은 7일간만 보관돼요. 사장님께 문의해 주세요."), status_code=410)
 
-    files = _list_files(code)
-    if not files:
+    names = await _storage_list(code)
+    if not names:
         return HTMLResponse(_simple_page("사진 준비 중이에요 📸", "잠시 후 다시 확인해 주세요."))
 
-    base = str(request.base_url).rstrip("/")
-    safe_code = _html.escape(code)
-    items = "".join(
-        f'<a class="ph" href="{base}/media/{safe_code}/{_html.escape(fn)}" download>'
-        f'<img loading="lazy" src="{base}/media/{safe_code}/{_html.escape(fn)}"></a>'
-        for fn in files
-    )
+    client = await get_supabase()
+    photo_items = []
+    for fn in names:
+        url = await _public_url(client, code, fn)
+        photo_items.append(
+            f'<a class="ph" href="{url}" download>'
+            f'<img loading="lazy" src="{url}"></a>'
+        )
+    items = "".join(photo_items)
     memo = _html.escape(al.get("memo") or "")
     html = f"""<!DOCTYPE html>
 <html lang="ko"><head>
@@ -356,7 +396,7 @@ async function loadThumbs(code){
   if(!files.length){ el.innerHTML=''; return; }
   el.innerHTML = `<div class="thumbs">${files.map(fn=>`
     <div class="thumb">
-      <img src="/media/${code}/${fn}" loading="lazy">
+      <img src="/photos/thumb/${code}/${fn}" loading="lazy">
       <button class="xbtn" onclick="deletePhoto('${code}','${fn}')">×</button>
     </div>`).join('')}</div>`;
 }

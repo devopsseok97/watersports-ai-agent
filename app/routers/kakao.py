@@ -63,3 +63,4 @@ async def kakao_webhook(request: Request):
         asyncio.create_task(notify_owner(user_id=user_id, message=user_message))
 
     return KakaoWebhookResponse.from_text(reply)
+    

@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 *.pyo
+*.bak
 .DS_Store
 .venv/
 venv/
+uvicorn.log
+photo_storage/
+PROJECT_SUMMARY.md
