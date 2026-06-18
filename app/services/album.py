@@ -80,6 +80,18 @@ async def delete_album(code: str):
     await client.table("photo_albums").delete().eq("code", code).execute()
 
 
+async def list_expired_albums() -> list[dict]:
+    client = await get_supabase()
+    now = datetime.now(timezone.utc).isoformat()
+    res = (
+        await client.table("photo_albums")
+        .select("*")
+        .lt("expires_at", now)
+        .execute()
+    )
+    return res.data or []
+
+
 def is_expired(album: dict) -> bool:
     exp = album.get("expires_at")
     if not exp:

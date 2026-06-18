@@ -150,6 +150,29 @@ async def delete_photo_api(code: str, filename: str, _=Depends(require_admin)):
     return {"deleted": filename, "photo_count": len(names)}
 
 
+async def cleanup_expired_albums() -> int:
+    """만료된 앨범의 Storage 파일과 DB 레코드를 삭제. 삭제된 앨범 수 반환."""
+    expired = await album.list_expired_albums()
+    if not expired:
+        return 0
+    client = await get_supabase()
+    deleted = 0
+    for al in expired:
+        code = al.get("code", "")
+        if not code:
+            continue
+        try:
+            names = await _storage_list(code)
+            if names:
+                await client.storage.from_(STORAGE_BUCKET).remove([f"{code}/{n}" for n in names])
+            await album.delete_album(code)
+            deleted += 1
+            logger.info(f"만료 앨범 자동 삭제: {code}")
+        except Exception as e:
+            logger.error(f"만료 앨범 삭제 실패 [{code}]: {e}")
+    return deleted
+
+
 @router.delete("/api/albums/{code}")
 async def delete_album_api(code: str, _=Depends(require_admin)):
     al = await album.get_album(code)
