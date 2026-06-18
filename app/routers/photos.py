@@ -50,7 +50,7 @@ async def _storage_list(code: str) -> list[str]:
     _check_code(code)
     client = await get_supabase()
     try:
-        items = await client.storage.from_(STORAGE_BUCKET).list(path=code, options={"limit": 1000, "offset": 0})
+        items = await client.storage.from_(STORAGE_BUCKET).list(path=code, options={"limit": 3000, "offset": 0})
         names = []
         for item in (items or []):
             name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
