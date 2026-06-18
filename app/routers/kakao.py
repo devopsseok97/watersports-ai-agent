@@ -47,16 +47,18 @@ async def kakao_webhook(request: Request):
     # 예약 의향 감지
     is_booking_intent = any(kw in user_message for kw in BOOKING_KEYWORDS)
 
-    # 대화 기록 저장 (실패해도 응답은 반환)
-    try:
-        await save_conversation(
-            user_id=user_id,
-            user_message=user_message,
-            bot_reply=reply,
-            is_booking_intent=is_booking_intent,
-        )
-    except Exception as e:
-        logger.warning(f"대화 저장 실패: {e}")
+    # 대화 기록 저장 — 백그라운드로 처리해 응답 지연 없음
+    async def _save():
+        try:
+            await save_conversation(
+                user_id=user_id,
+                user_message=user_message,
+                bot_reply=reply,
+                is_booking_intent=is_booking_intent,
+            )
+        except Exception as e:
+            logger.warning(f"대화 저장 실패: {e}")
+    asyncio.create_task(_save())
 
     # 예약 의향 → 사장님 슬랙 알림 (백그라운드)
     if is_booking_intent:

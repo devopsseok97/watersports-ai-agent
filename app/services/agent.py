@@ -148,14 +148,19 @@ class AgentService:
         self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     async def get_reply(self, user_id: str, message: str, shop_key: str = "default") -> str:
-        # 날씨 기반 운영 상태 조회
-        weather_status = await get_operation_status()
+        import asyncio
 
-        # 예약 가능 현황 (마감 슬롯 요약)
-        try:
-            availability_status = await build_availability_text()
-        except Exception:
-            availability_status = ""
+        async def _safe_availability():
+            try:
+                return await build_availability_text()
+            except Exception:
+                return ""
+
+        # 날씨 조회 + 예약 현황 조회 병렬 실행
+        weather_status, availability_status = await asyncio.gather(
+            get_operation_status(),
+            _safe_availability(),
+        )
 
         # 대화 기록 초기화
         if user_id not in conversation_history:
