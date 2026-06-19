@@ -9,6 +9,7 @@
 정원은 종목별 독립(데카40/데패20 따로).
 """
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from app.services.db import get_supabase
@@ -109,8 +110,9 @@ async def update_reservation(
     amount: int = 0,
     payment_method: str = "계좌이체",
     deposit_amount: int = 0,
+    date: str = "",
 ) -> dict:
-    """예약 1건 수정 (날짜는 유지, 나머지 필드 갱신)."""
+    """예약 1건 수정."""
     client = await get_supabase()
     pay = (payment_method or "계좌이체").strip()
     if pay not in PAYMENT_METHODS:
@@ -126,6 +128,8 @@ async def update_reservation(
         "payment_method": pay,
         "deposit_amount": _to_amount(deposit_amount),
     }
+    if date and re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        patch["slot_date"] = date
     res = (
         await client.table("reservations")
         .update(patch)

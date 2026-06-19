@@ -65,6 +65,7 @@ async def post_reservation(
 @router.post("/api/reservations/update")
 async def update_reservation(
     id: int = Form(...),
+    date: str = Form(""),
     program: str = Form(...),
     time_slot: str = Form(""),
     customer_name: str = Form(""),
@@ -77,7 +78,7 @@ async def update_reservation(
     _=Depends(require_admin),
 ):
     row = await av.update_reservation(
-        id, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount
+        id, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount, date
     )
     return {"ok": True, "reservation": row}
 
@@ -256,6 +257,9 @@ ADMIN_HTML = """<!DOCTYPE html>
   .savebtn { width:100%; background:var(--accent); color:#fff; border:none; padding:16px;
              border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:6px; }
   .savebtn:active { background:var(--accent-press); }
+  .delbtn-modal { width:100%; background:none; border:1.5px solid var(--full); color:var(--full);
+                  padding:14px; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; margin-top:8px; }
+  .delbtn-modal:active { background:var(--full); color:#fff; }
 
   /* ===== 모바일 ===== */
   @media (max-width:560px){
@@ -376,6 +380,10 @@ ADMIN_HTML = """<!DOCTYPE html>
     <div class="modal-body">
       <input type="hidden" id="e_id">
       <div class="form">
+        <div class="field full">
+          <label>날짜</label>
+          <input type="date" id="e_date">
+        </div>
         <div class="field">
           <label>종목</label>
           <select id="e_prog" onchange="onEditProgChange()"></select>
@@ -418,6 +426,7 @@ ADMIN_HTML = """<!DOCTYPE html>
           <input id="e_memo" placeholder="예: 미입금 / 단체 / 외국인">
         </div>
         <button class="savebtn" onclick="saveEdit()">수정 저장</button>
+        <button class="delbtn-modal" onclick="delFromEdit()">🗑 예약 삭제</button>
       </div>
     </div>
   </div>
@@ -660,6 +669,7 @@ function openEdit(id){
   const r = ROWS.find(x=>x.id===id);
   if(!r) return;
   $('e_id').value = r.id;
+  $('e_date').value = r.slot_date || dateEl.value;
   $('e_prog').value = r.program;
   onEditProgChange();
   const p = progByKey(r.program);
@@ -683,6 +693,7 @@ function getEditTime(){
 async function saveEdit(){
   const fd = new FormData();
   fd.append('id', $('e_id').value);
+  fd.append('date', $('e_date').value);
   fd.append('program', $('e_prog').value);
   fd.append('time_slot', getEditTime());
   fd.append('customer_name', $('e_name').value.trim());
@@ -698,6 +709,17 @@ async function saveEdit(){
     alert('예약 수정 실패 ('+res.status+')\\n'+t.slice(0,500));
     return;
   }
+  closeEdit();
+  loadDay();
+}
+
+async function delFromEdit(){
+  const id = Number($('e_id').value);
+  if(!id) return;
+  if(!confirm('이 예약을 삭제할까요?')) return;
+  const fd = new FormData();
+  fd.append('id', id);
+  await fetch('api/reservations/delete', {method:'POST', body:fd});
   closeEdit();
   loadDay();
 }
