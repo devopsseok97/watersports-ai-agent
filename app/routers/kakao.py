@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from app.models.kakao import KakaoWebhookRequest, KakaoWebhookResponse
 from app.services.agent import AgentService
 from app.services.db import save_conversation
-from app.services.slack import notify_owner
+from app.services.slack import notify_inquiry
 import logging, asyncio
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,11 @@ async def kakao_webhook(request: Request):
     # 예약 의향 감지
     is_booking_intent = any(kw in user_message for kw in BOOKING_KEYWORDS)
 
-    # 대화 기록 저장 — 백그라운드로 처리해 응답 지연 없음
-    async def _save():
+    # AI가 전화 안내로 넘긴 경우 감지 (직접 상담 필요 신호)
+    is_escalation = "전화로 문의" in reply or "전화 문의" in reply
+
+    # 대화 기록 저장 + 슬랙 알림 — 백그라운드로 처리해 응답 지연 없음
+    async def _post_response():
         try:
             await save_conversation(
                 user_id=user_id,
@@ -58,11 +61,12 @@ async def kakao_webhook(request: Request):
             )
         except Exception as e:
             logger.warning(f"대화 저장 실패: {e}")
-    asyncio.create_task(_save())
-
-    # 예약 의향 → 사장님 슬랙 알림 (백그라운드)
-    if is_booking_intent:
-        asyncio.create_task(notify_owner(user_id=user_id, message=user_message))
+        await notify_inquiry(
+            user_id=user_id,
+            message=user_message,
+            is_booking=is_booking_intent,
+            is_escalation=is_escalation,
+        )
+    asyncio.create_task(_post_response())
 
     return KakaoWebhookResponse.from_text(reply)
-    

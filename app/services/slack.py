@@ -8,14 +8,33 @@ logger = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
 
 
-async def notify_owner(user_id: str, message: str):
-    """예약 의향 감지 시 사장님 슬랙 알림"""
-    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+async def notify_inquiry(
+    user_id: str,
+    message: str,
+    is_booking: bool = False,
+    is_escalation: bool = False,
+):
+    """모든 카카오 문의를 슬랙으로 알림.
+
+    유형별 헤더:
+    - 🆘 AI 한계 → 직접 상담 필요
+    - 📅 예약 의향 고객
+    - 💬 새 문의 (일반)
+    """
+    now = datetime.now(KST).strftime("%m/%d %H:%M")
+
+    if is_escalation:
+        title = "🆘 직접 상담 필요 — AI가 전화 안내함"
+    elif is_booking:
+        title = "📅 예약 의향 고객 감지!"
+    else:
+        title = "💬 새 카카오 문의"
+
     payload = {
         "blocks": [
             {
                 "type": "header",
-                "text": {"type": "plain_text", "text": "🔔 예약 의향 고객 감지!"}
+                "text": {"type": "plain_text", "text": title}
             },
             {
                 "type": "section",
@@ -30,7 +49,7 @@ async def notify_owner(user_id: str, message: str):
             },
             {
                 "type": "context",
-                "elements": [{"type": "mrkdwn", "text": "카카오 채널에서 직접 확인 후 답변해 주세요 💬"}]
+                "elements": [{"type": "mrkdwn", "text": "카카오 채널 관리자센터에서 대화 전체를 볼 수 있어요 💬"}]
             }
         ]
     }
@@ -41,3 +60,8 @@ async def notify_owner(user_id: str, message: str):
             response.raise_for_status()
     except Exception as e:
         logger.warning(f"슬랙 알림 전송 실패: {e}")
+
+
+async def notify_owner(user_id: str, message: str):
+    """하위 호환용 — notify_inquiry로 위임."""
+    await notify_inquiry(user_id, message, is_booking=True)
