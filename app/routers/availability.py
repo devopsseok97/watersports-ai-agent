@@ -265,11 +265,21 @@ ADMIN_HTML = """<!DOCTYPE html>
 
   /* ===== 모바일 ===== */
   @media (max-width:600px){
-    body { font-size:17px; }
-    main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
-    .form { grid-template-columns:1fr; }
-    .sumgrid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-    /* 예약 목록 모바일 */
+    body { font-size:16px; }
+    main { padding:12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+    /* 잔여석: 가로 스크롤 1줄 */
+    .sumgrid { display:flex; overflow-x:auto; gap:8px; padding-bottom:4px;
+               -webkit-overflow-scrolling:touch; grid-template-columns:unset; }
+    .seat { min-width:96px; flex-shrink:0; }
+
+    /* 폼: 2열 유지, 더 컴팩트 */
+    .form { grid-template-columns:1fr 1fr; gap:8px; }
+    .form label { font-size:12px; margin-bottom:3px; }
+    .form select, .form input { padding:9px 10px; font-size:14px; }
+    .addbtn { padding:12px; font-size:15px; }
+
+    /* 예약 목록 */
     .res-hdr { display:none; }
     .r-prog  { display:none; }
     .r-amt   { display:none; }
