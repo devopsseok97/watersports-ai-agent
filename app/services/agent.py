@@ -211,7 +211,7 @@ class AgentService:
         try:
             response = await self.client.messages.create(
                 model="claude-haiku-4-5-20251001",
-                max_tokens=700,
+                max_tokens=450,
                 system=system_blocks,
                 messages=history,
                 extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
