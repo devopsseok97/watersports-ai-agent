@@ -165,26 +165,26 @@ ADMIN_HTML = """<!DOCTYPE html>
   .quick:active { background:var(--accent); color:#fff; }
 
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px;
-          padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
-  .card h2 { font-size:16px; margin:0 0 16px; color:var(--sub); font-weight:700; }
+          padding:14px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .card h2 { font-size:15px; margin:0 0 10px; color:var(--sub); font-weight:700; }
 
-  /* ===== 잔여 좌석: 큰 숫자 카드 ===== */
-  .seatlegend { display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:14px; }
-  .seatlegend .lg { display:flex; align-items:center; gap:6px; font-size:14px; color:var(--sub); font-weight:600; }
-  .seatlegend .lg i { width:14px; height:14px; border-radius:4px; display:inline-block; }
-  .sumgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
-  .seat { position:relative; overflow:hidden; border:1.5px solid var(--line); border-radius:14px; padding:14px 14px 12px; background:var(--field); }
-  .seat .gbar { height:6px; margin:-14px -14px 10px; background:var(--gc,#64748b); }
-  .seat .stop { font-size:14px; color:var(--gc,var(--sub)); font-weight:800; margin-bottom:2px; }
+  /* ===== 잔여 좌석: 컴팩트 카드 ===== */
+  .seatlegend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; }
+  .seatlegend .lg { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--sub); font-weight:600; }
+  .seatlegend .lg i { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  .sumgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
+  .seat { position:relative; overflow:hidden; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px 8px; background:var(--field); }
+  .seat .gbar { height:4px; margin:-10px -12px 8px; background:var(--gc,#64748b); }
+  .seat .stop { font-size:12px; color:var(--gc,var(--sub)); font-weight:800; margin-bottom:1px; }
   /* 종목별 색 (상단 띠 + 종목명) */
-  .seat.grp-paddle { --gc:#2563eb; }  /* 패들보드 = 파랑 */
-  .seat.grp-kayak  { --gc:#7c3aed; }  /* 카약 = 보라 */
-  .seat.grp-wind   { --gc:#0d9488; }  /* 윈드서핑 = 청록 */
-  .seat.grp-foil   { --gc:#db2777; }  /* 포일류 = 분홍 */
+  .seat.grp-paddle { --gc:#2563eb; }
+  .seat.grp-kayak  { --gc:#7c3aed; }
+  .seat.grp-wind   { --gc:#0d9488; }
+  .seat.grp-foil   { --gc:#db2777; }
   .seat.grp-etc    { --gc:#64748b; }
-  .seat .stime { font-size:15px; font-weight:700; margin-bottom:8px; }
-  .seat .big { font-size:30px; font-weight:900; line-height:1; }
-  .seat .frac { font-size:14px; color:var(--sub); margin-top:6px; font-weight:600; }
+  .seat .stime { font-size:13px; font-weight:700; margin-bottom:4px; }
+  .seat .big { font-size:24px; font-weight:900; line-height:1; }
+  .seat .frac { font-size:12px; color:var(--sub); margin-top:3px; font-weight:600; }
   .seat.ok   { border-color:var(--ok);   background:var(--ok-bg); }
   .seat.warn { border-color:var(--warn); background:var(--warn-bg); }
   .seat.full { border-color:var(--full); background:var(--full-bg); }
@@ -195,14 +195,14 @@ ADMIN_HTML = """<!DOCTYPE html>
   .seat.seatclick:active { transform:scale(.97); }
 
   /* ===== 추가 폼 ===== */
-  .form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .form .field { display:flex; flex-direction:column; }
-  .form label { font-size:14px; color:var(--sub); font-weight:600; margin-bottom:6px; }
+  .form label { font-size:13px; color:var(--sub); font-weight:600; margin-bottom:4px; }
   .form select, .form input { width:100%; background:var(--field); border:1px solid var(--line);
-       color:var(--txt); padding:13px 14px; border-radius:10px; font-size:17px; }
+       color:var(--txt); padding:10px 12px; border-radius:10px; font-size:15px; }
   .form .full { grid-column:1 / -1; }
   .addbtn { grid-column:1 / -1; background:var(--accent); color:#fff; border:none;
-            padding:16px; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:4px; }
+            padding:13px; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer; margin-top:2px; }
   .addbtn:active { background:var(--accent-press); }
 
   /* ===== 예약 목록 ===== */
