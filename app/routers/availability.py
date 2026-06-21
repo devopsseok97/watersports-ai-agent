@@ -205,46 +205,39 @@ ADMIN_HTML = """<!DOCTYPE html>
             padding:16px; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:4px; }
   .addbtn:active { background:var(--accent-press); }
 
-  /* ===== 예약 목록: 표 형식 ===== */
-  .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .restable { width:100%; border-collapse:collapse; font-size:15px; }
-  .restable thead th {
-    background:var(--field); border-bottom:2px solid var(--line);
-    padding:10px 12px; text-align:left; font-size:13px; font-weight:700;
-    color:var(--sub); white-space:nowrap;
-  }
-  .restable tbody tr { border-bottom:1px solid var(--line); }
-  .restable tbody tr:last-child { border-bottom:none; }
-  .restable tbody tr:hover { background:var(--field); }
-  .restable td { padding:10px 12px; vertical-align:middle; }
-
-  /* 열별 */
-  .tc-time { font-weight:900; font-size:17px; color:var(--accent); white-space:nowrap; }
-  .tc-prog { white-space:nowrap; }
+  /* ===== 예약 목록 ===== */
   .pdot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
-  .tc-nm { font-weight:700; font-size:16px; }
-  .tc-meta { color:var(--sub); font-size:12px; margin-top:2px; }
-  .tc-msub { display:none; }
-  .tc-ppl { font-weight:800; font-size:16px; text-align:center; white-space:nowrap; }
-  .tc-amt { text-align:right; white-space:nowrap; }
-  .tc-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; }
-  .tc-amt .dep-amt { font-size:12px; color:#10b981; font-weight:600; margin-top:2px; }
-  .tc-acts { white-space:nowrap; text-align:right; }
-  .tc-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); }
-  .tc-acts button:active { transform:scale(1.2); }
-
-  /* 행 상태 */
+  .res-hdr { display:flex; align-items:center; padding:6px 4px 10px;
+             border-bottom:2px solid var(--line); font-size:13px; font-weight:700; color:var(--sub); }
+  .h-time { min-width:58px; }
+  .h-prog { width:130px; }
+  .h-name { flex:1; }
+  .h-amt  { width:100px; text-align:right; }
+  .h-acts { width:118px; }
+  .res-row { border-bottom:1px solid var(--line); }
+  .res-row:last-child { border-bottom:none; }
+  .res-row:hover { background:var(--field); }
+  .res-main { display:flex; align-items:center; gap:10px; padding:10px 4px; }
   .tr-noshow { opacity:.5; }
-  .tr-noshow .tc-nm { text-decoration:line-through; }
-  .tr-pending { background:rgba(245,158,11,.06); }
-  .tr-pending td:first-child { box-shadow:inset 3px 0 0 #f59e0b; }
-  .tr-deposited { background:rgba(16,185,129,.06); }
-  .tr-deposited td:first-child { box-shadow:inset 3px 0 0 #10b981; }
-
-  .nobadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
-             padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
+  .tr-noshow .r-nm { text-decoration:line-through; }
+  .tr-pending  { border-left:3px solid #f59e0b; padding-left:6px; background:rgba(245,158,11,.06); }
+  .tr-deposited { border-left:3px solid #10b981; padding-left:6px; background:rgba(16,185,129,.06); }
+  .r-time { min-width:52px; font-weight:900; font-size:17px; color:var(--accent); white-space:nowrap; flex-shrink:0; }
+  .r-prog { width:130px; font-size:14px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
+  .r-body { flex:1; min-width:0; }
+  .r-nm   { font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-meta { font-size:12px; color:var(--sub); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-sub  { display:none; font-size:12px; color:var(--sub); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-amt  { width:90px; text-align:right; flex-shrink:0; }
+  .r-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; white-space:nowrap; }
+  .r-amt .dep-amt  { font-size:12px; color:#10b981; font-weight:600; margin-top:2px; }
+  .r-acts { flex-shrink:0; white-space:nowrap; text-align:right; }
+  .r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); }
+  .r-acts button:active { transform:scale(1.2); }
+  .nobadge  { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
+              padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
   .pendbadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#f59e0b;
-             padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
+               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
   .daysum { text-align:right; padding:14px 6px 2px; font-size:16px; color:var(--sub); }
   .daysum b { color:var(--ok); font-size:19px; font-weight:900; margin-left:6px; }
   .daysum small { color:var(--sub); font-weight:600; font-size:13px; }
@@ -276,35 +269,13 @@ ADMIN_HTML = """<!DOCTYPE html>
     main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
     .form { grid-template-columns:1fr; }
     .sumgrid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-
-    /* 표 → 1행 2줄 압축 레이아웃 */
-    .tbl-wrap { overflow-x:visible; }
-    .restable, .restable tbody { display:block; width:100%; }
-    .restable thead { display:none; }
-    .restable tr {
-      display:flex; flex-wrap:nowrap; align-items:center;
-      gap:8px; padding:10px 4px; border-bottom:1px solid var(--line);
-      position:relative;
-    }
-    .restable td { display:block; padding:0; border:none; flex:0 0 auto; }
-    /* 상태 표시: 행 왼쪽 선 */
-    .tr-pending { border-left:3px solid #f59e0b; padding-left:6px; }
-    .tr-deposited { border-left:3px solid #10b981; padding-left:6px; }
-    .tr-pending td:first-child, .tr-deposited td:first-child { box-shadow:none; }
-    /* 시간 */
-    .tc-time { min-width:46px; font-size:16px; }
-    /* 종목·인원·금액 컬럼 숨기고 tc-msub로 대체 */
-    .tc-prog, .tc-ppl, .tc-amt { display:none; }
-    /* 이름 컬럼: 남은 공간 채움 */
-    .restable td:nth-child(3) { flex:1; min-width:0; overflow:hidden; }
-    .tc-nm { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    /* 모바일 서브라인: 종목·인원·금액 한 줄로 */
-    .tc-msub { display:block; font-size:12px; color:var(--sub); margin-top:3px;
-               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    /* 버튼: 🗑 숨기고 ✏️(수정모달에 삭제 포함) */
-    .tc-acts { }
-    .tc-acts button { font-size:21px; padding:4px 3px; min-width:34px; min-height:38px; }
-    .tc-acts .del-btn { display:none; }
+    /* 예약 목록 모바일 */
+    .res-hdr { display:none; }
+    .r-prog  { display:none; }
+    .r-amt   { display:none; }
+    .r-sub   { display:block; }
+    .r-acts .del-btn { display:none; }
+    .r-acts button { font-size:21px; padding:4px 3px; min-width:34px; min-height:38px; }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style></head>
@@ -600,7 +571,8 @@ function renderList(rows){
   const el = $('list');
   if(!rows.length){ el.innerHTML = '<div class="empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
   let sumAmt = 0;
-  const tbody = rows.map(r=>{
+  const hdr = `<div class="res-hdr"><span class="h-time">시간</span><span class="h-prog">종목</span><span class="h-name">이름</span><span class="h-amt">금액</span><span class="h-acts"></span></div>`;
+  const rowsHtml = rows.map(r=>{
     const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
     const st = (r.status||'예약');
     const isNo = st==='노쇼';
@@ -608,7 +580,7 @@ function renderList(rows){
     const amt = Number(r.amount)||0; if(st==='예약') sumAmt += amt;
     const dep = Number(r.deposit_amount)||0;
     const hasDeposit = dep > 0;
-    const trCls = isNo ? 'tr-noshow' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : ''));
+    const rowCls = isNo ? 'tr-noshow' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : ''));
     let badge = '';
     if(isNo) badge = '<span class="nobadge">노쇼</span>';
     else if(isPend) badge = '<span class="pendbadge">입금대기</span>';
@@ -623,20 +595,20 @@ function renderList(rows){
            + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
     }
     const subParts = [r.program, r.people+'명', ...(amt?[amt.toLocaleString('ko-KR')+'원']:[]), ...(hasDeposit?['예약금 '+dep.toLocaleString('ko-KR')+'원']:[])];
-    return `<tr class="${trCls}">
-      <td class="tc-time">${esc(r.time_slot)||'-'}</td>
-      <td class="tc-prog"><span class="pdot" style="background:${progColor(r.program)}"></span>${esc(r.program)}</td>
-      <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'} ${badge}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}<div class="tc-msub"><span class="pdot" style="background:${progColor(r.program)}"></span>${subParts.map(esc).join(' · ')}</div></td>
-      <td class="tc-ppl">${r.people}<small style="font-size:12px;color:var(--sub)">명</small></td>
-      <td class="tc-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</td>
-      <td class="tc-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button class="del-btn" onclick="delRes(${r.id})" title="삭제">🗑</button></td>
-    </tr>`;
+    return `<div class="res-row ${rowCls}"><div class="res-main">
+      <div class="r-time">${esc(r.time_slot)||'-'}</div>
+      <div class="r-prog"><span class="pdot" style="background:${progColor(r.program)}"></span>${esc(r.program)}</div>
+      <div class="r-body">
+        <div class="r-nm">${esc(r.customer_name)||'(이름없음)'} ${badge}</div>
+        ${meta?`<div class="r-meta">${meta}</div>`:''}
+        <div class="r-sub"><span class="pdot" style="background:${progColor(r.program)}"></span>${subParts.map(esc).join(' · ')}</div>
+      </div>
+      <div class="r-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</div>
+      <div class="r-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button class="del-btn" onclick="delRes(${r.id})" title="삭제">🗑</button></div>
+    </div></div>`;
   }).join('');
-  el.innerHTML = `<div class="tbl-wrap"><table class="restable">
-    <thead><tr><th>시간</th><th>종목</th><th>이름</th><th>인원</th><th>금액</th><th></th></tr></thead>
-    <tbody>${tbody}</tbody>
-  </table></div>`
-  + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'');
+  el.innerHTML = hdr + rowsHtml
+    + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'');
 }
 
 async function addRes(){
