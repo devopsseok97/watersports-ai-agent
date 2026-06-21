@@ -205,39 +205,47 @@ ADMIN_HTML = """<!DOCTYPE html>
             padding:16px; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:4px; }
   .addbtn:active { background:var(--accent-press); }
 
-  /* ===== 예약 목록: 카드형 ===== */
-  .res { display:flex; align-items:center; gap:14px; padding:16px;
-         border:1px solid var(--line); border-radius:14px; margin-bottom:10px; background:var(--field); }
-  .res .left { text-align:center; min-width:60px; }
-  .res .time { font-weight:900; font-size:19px; color:var(--accent); }
-  .res .prog { display:inline-block; font-size:13px; color:var(--sub); margin-top:3px; }
-  .res .who { flex:1; min-width:0; }
-  .res .who .nm { font-weight:700; font-size:18px; }
-  .res .who .meta { color:var(--sub); font-size:14px; margin-top:3px; }
-  .res .ppl { font-weight:900; font-size:20px; white-space:nowrap; text-align:right; }
-  .res .ppl small { font-size:13px; font-weight:600; color:var(--sub); }
-  .res .ppl .amt { font-size:14px; font-weight:700; color:var(--ok); margin-top:4px; }
+  /* ===== 예약 목록: 표 형식 ===== */
+  .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .restable { width:100%; border-collapse:collapse; font-size:15px; }
+  .restable thead th {
+    background:var(--field); border-bottom:2px solid var(--line);
+    padding:10px 12px; text-align:left; font-size:13px; font-weight:700;
+    color:var(--sub); white-space:nowrap;
+  }
+  .restable tbody tr { border-bottom:1px solid var(--line); }
+  .restable tbody tr:last-child { border-bottom:none; }
+  .restable tbody tr:hover { background:var(--field); }
+  .restable td { padding:10px 12px; vertical-align:middle; }
+
+  /* 열별 */
+  .tc-time { font-weight:900; font-size:17px; color:var(--accent); white-space:nowrap; }
+  .tc-prog { white-space:nowrap; }
+  .pdot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .tc-nm { font-weight:700; font-size:16px; }
+  .tc-meta { color:var(--sub); font-size:12px; margin-top:2px; }
+  .tc-ppl { font-weight:800; font-size:16px; text-align:center; white-space:nowrap; }
+  .tc-amt { text-align:right; white-space:nowrap; }
+  .tc-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; }
+  .tc-amt .dep-amt { font-size:12px; color:#10b981; font-weight:600; margin-top:2px; }
+  .tc-acts { white-space:nowrap; text-align:right; }
+  .tc-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); }
+  .tc-acts button:active { transform:scale(1.2); }
+
+  /* 행 상태 */
+  .tr-noshow { opacity:.5; }
+  .tr-noshow .tc-nm { text-decoration:line-through; }
+  .tr-pending { background:rgba(245,158,11,.06); }
+  .tr-pending td:first-child { box-shadow:inset 3px 0 0 #f59e0b; }
+  .tr-deposited { background:rgba(16,185,129,.06); }
+  .tr-deposited td:first-child { box-shadow:inset 3px 0 0 #10b981; }
+
+  .nobadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
+             padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
+  .pendbadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#f59e0b;
+             padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
   .daysum { text-align:right; padding:14px 6px 2px; font-size:16px; color:var(--sub); }
   .daysum b { color:var(--ok); font-size:19px; font-weight:900; margin-left:6px; }
-  .res .acts { display:flex; gap:2px; }
-  .res .edit, .res .del, .res .noshow-btn, .res .undo, .res .pend-btn, .res .confirm-btn { background:none; border:none; color:var(--sub); font-size:22px; cursor:pointer; padding:6px; }
-  .res .edit:active { color:var(--accent); }
-  .res .del:active { color:var(--full); }
-  .res .noshow-btn:active { color:var(--warn); }
-  .res .pend-btn:active { color:var(--warn); }
-  .res .confirm-btn:active { color:var(--ok); }
-  /* 노쇼 처리된 예약: 흐리게 + 취소선 느낌 */
-  .res.noshow { opacity:.55; background:repeating-linear-gradient(45deg,transparent,transparent 8px,var(--field) 8px,var(--field) 16px); }
-  .res.noshow .nm { text-decoration:line-through; }
-  /* 입금대기(가예약): 노란 좌측 강조 */
-  .res.pending { border-left:4px solid #f59e0b; background:rgba(245,158,11,.06); }
-  /* 예약금 납부: 초록 좌측 강조 */
-  .res.deposited { border-left:4px solid #10b981; background:rgba(16,185,129,.06); }
-  .res .dep { font-size:13px; font-weight:700; color:#10b981; margin-top:3px; }
-  .nobadge { display:inline-block; font-size:12px; font-weight:800; color:#fff; background:var(--full);
-             padding:2px 7px; border-radius:6px; margin-left:6px; vertical-align:middle; text-decoration:none; }
-  .pendbadge { display:inline-block; font-size:12px; font-weight:800; color:#fff; background:#f59e0b;
-             padding:2px 7px; border-radius:6px; margin-left:6px; vertical-align:middle; text-decoration:none; }
   .daysum small { color:var(--sub); font-weight:600; font-size:13px; }
   .empty { color:var(--sub); font-size:16px; padding:12px 0; text-align:center; }
   .hint { color:var(--sub); font-size:14px; margin-top:14px; line-height:1.6; }
@@ -267,18 +275,9 @@ ADMIN_HTML = """<!DOCTYPE html>
     main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
     .form { grid-template-columns:1fr; }
     .sumgrid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-    .res .who .nm { font-size:17px; }
-    /* 예약 카드: 액션 버튼을 두 번째 줄로 */
-    .res { flex-wrap:wrap; gap:6px; }
-    .res .acts {
-      width:100%; border-top:1px solid var(--line);
-      padding-top:8px; justify-content:flex-end; gap:0;
-    }
-    .res .edit, .res .del, .res .noshow-btn,
-    .res .undo, .res .pend-btn, .res .confirm-btn {
-      min-width:48px; min-height:48px; font-size:24px;
-      display:flex; align-items:center; justify-content:center;
-    }
+    .restable { font-size:14px; }
+    .restable td, .restable th { padding:9px 8px; }
+    .tc-acts button { font-size:18px; padding:4px 2px; }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style></head>
@@ -557,12 +556,24 @@ function renderSummary(summary){
 
 function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+const PROG_COLOR = {
+  '패들': '#2563eb', '카약': '#7c3aed', '윈드': '#0d9488', '포일': '#db2777'
+};
+function progColor(name){
+  name = name||'';
+  if(name.includes('패들')) return '#2563eb';
+  if(name.includes('카약')) return '#7c3aed';
+  if(name.includes('윈드')) return '#0d9488';
+  if(name.includes('포일')) return '#db2777';
+  return '#64748b';
+}
+
 function renderList(rows){
   $('listttl').textContent = `예약 목록 (${rows.length}건)`;
   const el = $('list');
   if(!rows.length){ el.innerHTML = '<div class="empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
   let sumAmt = 0;
-  el.innerHTML = rows.map(r=>{
+  const tbody = rows.map(r=>{
     const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
     const st = (r.status||'예약');
     const isNo = st==='노쇼';
@@ -570,38 +581,34 @@ function renderList(rows){
     const amt = Number(r.amount)||0; if(st==='예약') sumAmt += amt;
     const dep = Number(r.deposit_amount)||0;
     const hasDeposit = dep > 0;
-    const cls = isNo ? ' noshow' : (isPend ? ' pending' : (hasDeposit ? ' deposited' : ''));
+    const trCls = isNo ? 'tr-noshow' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : ''));
     let badge = '';
-    if(isNo) badge = ' <span class="nobadge">노쇼</span>';
-    else if(isPend) badge = ' <span class="pendbadge">입금대기</span>';
-    // 상태별 버튼
+    if(isNo) badge = '<span class="nobadge">노쇼</span>';
+    else if(isPend) badge = '<span class="pendbadge">입금대기</span>';
     let acts = '';
     if(isNo){
-      acts = `<button class="undo" onclick="setStatus(${r.id}, '예약')" title="예약 복원">↩️</button>`;
+      acts = `<button onclick="setStatus(${r.id},'예약')" title="복원">↩️</button>`;
     } else if(isPend){
-      acts = `<button class="confirm-btn" onclick="setStatus(${r.id}, '예약')" title="입금확인 → 확정">✅</button>`
-           + `<button class="noshow-btn" onclick="setStatus(${r.id}, '노쇼')" title="노쇼 처리">🚫</button>`;
+      acts = `<button onclick="setStatus(${r.id},'예약')" title="입금확인 → 확정">✅</button>`
+           + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
     } else {
-      acts = `<button class="pend-btn" onclick="setStatus(${r.id}, '입금대기')" title="입금대기로 전환">⏳</button>`
-           + `<button class="noshow-btn" onclick="setStatus(${r.id}, '노쇼')" title="노쇼 처리">🚫</button>`;
+      acts = `<button onclick="setStatus(${r.id},'입금대기')" title="입금대기로 전환">⏳</button>`
+           + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
     }
-    return `<div class="res${cls}">
-      <div class="left">
-        <div class="time">${esc(r.time_slot)||'-'}</div>
-        <div class="prog">${esc(r.program)}</div>
-      </div>
-      <div class="who">
-        <div class="nm">${esc(r.customer_name)||'(이름없음)'}${badge}</div>
-        ${meta?`<div class="meta">${meta}</div>`:''}
-      </div>
-      <div class="ppl">${r.people}<small>명</small>${amt>0?`<div class="amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</div>
-      <div class="acts">
-        ${acts}
-        <button class="edit" onclick="openEdit(${r.id})" title="수정">✏️</button>
-        <button class="del" onclick="delRes(${r.id})" title="삭제">🗑</button>
-      </div>
-    </div>`;
-  }).join('') + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'');
+    return `<tr class="${trCls}">
+      <td class="tc-time">${esc(r.time_slot)||'-'}</td>
+      <td class="tc-prog"><span class="pdot" style="background:${progColor(r.program)}"></span>${esc(r.program)}</td>
+      <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'} ${badge}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}</td>
+      <td class="tc-ppl">${r.people}<small style="font-size:12px;color:var(--sub)">명</small></td>
+      <td class="tc-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</td>
+      <td class="tc-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button onclick="delRes(${r.id})" title="삭제">🗑</button></td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<div class="tbl-wrap"><table class="restable">
+    <thead><tr><th>시간</th><th>종목</th><th>이름</th><th>인원</th><th>금액</th><th></th></tr></thead>
+    <tbody>${tbody}</tbody>
+  </table></div>`
+  + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'');
 }
 
 async function addRes(){
@@ -734,18 +741,20 @@ function openSeat(i){
   $('seat-title').textContent = `${s.program} ${s.time_slot}`;
   $('seat-sub').textContent = `예약 ${s.booked}/${s.capacity}명 · 잔여 ${s.remaining}명 (이름을 누르면 수정)`;
   const body = $('seat-body');
-  body.innerHTML = rows.length ? rows.map(r=>{
-    const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
-    const amt = Number(r.amount)||0;
-    return `<div class="res" onclick="closeSeat();openEdit(${r.id})" style="cursor:pointer">
-      <div class="who">
-        <div class="nm">${esc(r.customer_name)||'(이름없음)'}</div>
-        ${meta?`<div class="meta">${meta}</div>`:''}
-      </div>
-      <div class="ppl">${r.people}<small>명</small>${amt>0?`<div class="amt">${amt.toLocaleString('ko-KR')}원</div>`:''}</div>
-      <div class="acts"><span class="edit">✏️</span></div>
-    </div>`;
-  }).join('') : '<div class="empty">이 시간대 예약이 없습니다.</div>';
+  body.innerHTML = rows.length ? `<div class="tbl-wrap"><table class="restable">
+    <thead><tr><th>이름</th><th>인원</th><th>금액</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>{
+      const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
+      const amt = Number(r.amount)||0;
+      const dep = Number(r.deposit_amount)||0;
+      return `<tr onclick="closeSeat();openEdit(${r.id})" style="cursor:pointer">
+        <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}</td>
+        <td class="tc-ppl">${r.people}<small style="font-size:12px;color:var(--sub)">명</small></td>
+        <td class="tc-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${dep>0?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</td>
+        <td class="tc-acts"><button style="background:none;border:none;font-size:18px">✏️</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>` : '<div class="empty">이 시간대 예약이 없습니다.</div>';
   $('seatmodal').classList.add('show');
 }
 function closeSeat(){ $('seatmodal').classList.remove('show'); }
