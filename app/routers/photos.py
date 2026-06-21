@@ -292,6 +292,8 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>서퍼스트 관리자 · 사진</title>
 <style>
   :root {
@@ -479,4 +481,5 @@ async function uploadFiles(code, files){
 }
 load();
 </script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body></html>"""

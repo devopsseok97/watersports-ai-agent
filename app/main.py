@@ -1,9 +1,11 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.routers import kakao, health, admin, photos, availability
 from app.config import settings
@@ -43,3 +45,7 @@ app.include_router(kakao.router, prefix="/kakao")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(photos.router, prefix="/photos")
 app.include_router(availability.router, prefix="/availability")
+
+_static_dir = Path(__file__).parent.parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
