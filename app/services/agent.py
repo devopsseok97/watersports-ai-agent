@@ -1,7 +1,35 @@
+import time
 import anthropic
 from app.config import settings
 from app.services.weather import get_operation_status
 from app.services.availability import build_availability_text, today_str
+
+# 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
+_cache: dict = {}
+_WEATHER_TTL = 1800  # 30분
+_AVAIL_TTL   = 60    # 1분
+
+
+async def _cached_weather() -> str:
+    now = time.monotonic()
+    if "weather" not in _cache or now - _cache["weather"][0] > _WEATHER_TTL:
+        try:
+            val = await get_operation_status()
+        except Exception:
+            val = ""
+        _cache["weather"] = (now, val)
+    return _cache["weather"][1]
+
+
+async def _cached_availability() -> str:
+    now = time.monotonic()
+    if "avail" not in _cache or now - _cache["avail"][0] > _AVAIL_TTL:
+        try:
+            val = await build_availability_text()
+        except Exception:
+            val = ""
+        _cache["avail"] = (now, val)
+    return _cache["avail"][1]
 
 # 업체별 설정 (나중에 DB로 이전)
 SHOP_CONFIG = {
@@ -52,9 +80,8 @@ MAX_HISTORY = 10   # 유저당 최근 N턴 유지
 MAX_USERS = 5000   # 메모리 보호: 최대 보관 유저 수
 
 
-def build_system_prompt(
-    shop_key: str = "default", weather_status: str = "", availability_status: str = ""
-) -> str:
+def build_system_prompt(shop_key: str = "default") -> str:
+    """캐시용 정적 시스템 프롬프트 (날씨·날짜·잔여석 제외)."""
     shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
     prices_text = "\n".join([f"  - {k}: {v}" for k, v in shop["prices"].items()])
     links = shop.get("smartstore_links", {})
@@ -63,7 +90,7 @@ def build_system_prompt(
     return f"""당신은 {shop['name']}의 AI 고객 상담 직원입니다.
 친절하고 간결하게 답변하세요. 핵심만 담아 너무 길지 않게 답하세요.
 당신은 24시간 응답 가능한 AI입니다. 운영시간은 현장 운영 시간이며, 시간과 관계없이 항상 문의에 답변하세요.
-오늘 날짜는 {today_str()} (KST)입니다. "내일", "이번 주말" 등은 이 날짜를 기준으로 계산하세요.
+"내일", "이번 주말" 등은 아래 dynamic 블록의 오늘 날짜를 기준으로 계산하세요.
 
 [답변 형식 - 가독성 매우 중요]
 ★ 카카오톡은 굵은 글씨·마크다운(**별표**, #, 등)이 표시되지 않습니다.
@@ -106,12 +133,6 @@ def build_system_prompt(
 [준비물 및 안내사항]
 {shop.get('preparation', '')}
 
-[오늘 날씨/운영 상태]
-{weather_status if weather_status else '운영 중입니다.'}
-
-[예약 가능 현황 (마감된 타임만 표시)]
-{availability_status if availability_status else '실시간 현황은 전화로 확인해 주세요.'}
-
 [네이버 스마트스토어 결제 링크]
 결제·예약을 원하는 손님에게는 아래 해당 링크를 안내하세요.
 구매 후 리뷰 작성도 꼭 부탁드리세요 (리뷰가 많을수록 다른 손님에게 도움이 돼요!).
@@ -150,16 +171,10 @@ class AgentService:
     async def get_reply(self, user_id: str, message: str, shop_key: str = "default") -> str:
         import asyncio
 
-        async def _safe_availability():
-            try:
-                return await build_availability_text()
-            except Exception:
-                return ""
-
-        # 날씨 조회 + 예약 현황 조회 병렬 실행
+        # 날씨·잔여석 캐시에서 병렬 조회
         weather_status, availability_status = await asyncio.gather(
-            get_operation_status(),
-            _safe_availability(),
+            _cached_weather(),
+            _cached_availability(),
         )
 
         # 대화 기록 초기화
@@ -177,12 +192,29 @@ class AgentService:
         # 최근 N턴만 유지
         history = conversation_history[user_id][-MAX_HISTORY * 2:]
 
+        # 시스템 프롬프트: 정적 블록(캐시) + 동적 블록(날짜·날씨·잔여석)
+        dynamic_part = (
+            f"오늘 날짜: {today_str()} (KST)\n\n"
+            f"[오늘 날씨/운영 상태]\n{weather_status or '운영 중입니다.'}\n\n"
+            f"[예약 가능 현황 (마감된 타임만 표시)]\n"
+            f"{availability_status or '실시간 현황은 전화로 확인해 주세요.'}"
+        )
+        system_blocks = [
+            {
+                "type": "text",
+                "text": build_system_prompt(shop_key),
+                "cache_control": {"type": "ephemeral"},
+            },
+            {"type": "text", "text": dynamic_part},
+        ]
+
         try:
             response = await self.client.messages.create(
-                model="claude-haiku-4-5-20251001",  # 빠르고 저렴
+                model="claude-haiku-4-5-20251001",
                 max_tokens=700,
-                system=build_system_prompt(shop_key, weather_status, availability_status),
+                system=system_blocks,
                 messages=history,
+                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
             )
             reply = response.content[0].text
 
