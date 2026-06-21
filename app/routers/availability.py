@@ -224,6 +224,7 @@ ADMIN_HTML = """<!DOCTYPE html>
   .pdot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
   .tc-nm { font-weight:700; font-size:16px; }
   .tc-meta { color:var(--sub); font-size:12px; margin-top:2px; }
+  .tc-msub { display:none; }
   .tc-ppl { font-weight:800; font-size:16px; text-align:center; white-space:nowrap; }
   .tc-amt { text-align:right; white-space:nowrap; }
   .tc-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; }
@@ -270,14 +271,40 @@ ADMIN_HTML = """<!DOCTYPE html>
   .delbtn-modal:active { background:var(--full); color:#fff; }
 
   /* ===== 모바일 ===== */
-  @media (max-width:560px){
+  @media (max-width:600px){
     body { font-size:17px; }
     main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
     .form { grid-template-columns:1fr; }
     .sumgrid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-    .restable { font-size:14px; }
-    .restable td, .restable th { padding:9px 8px; }
-    .tc-acts button { font-size:18px; padding:4px 2px; }
+
+    /* 표 → 1행 2줄 압축 레이아웃 */
+    .tbl-wrap { overflow-x:visible; }
+    .restable, .restable tbody { display:block; width:100%; }
+    .restable thead { display:none; }
+    .restable tr {
+      display:flex; flex-wrap:nowrap; align-items:center;
+      gap:8px; padding:10px 4px; border-bottom:1px solid var(--line);
+      position:relative;
+    }
+    .restable td { display:block; padding:0; border:none; flex:0 0 auto; }
+    /* 상태 표시: 행 왼쪽 선 */
+    .tr-pending { border-left:3px solid #f59e0b; padding-left:6px; }
+    .tr-deposited { border-left:3px solid #10b981; padding-left:6px; }
+    .tr-pending td:first-child, .tr-deposited td:first-child { box-shadow:none; }
+    /* 시간 */
+    .tc-time { min-width:46px; font-size:16px; }
+    /* 종목·인원·금액 컬럼 숨기고 tc-msub로 대체 */
+    .tc-prog, .tc-ppl, .tc-amt { display:none; }
+    /* 이름 컬럼: 남은 공간 채움 */
+    .restable td:nth-child(3) { flex:1; min-width:0; overflow:hidden; }
+    .tc-nm { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* 모바일 서브라인: 종목·인원·금액 한 줄로 */
+    .tc-msub { display:block; font-size:12px; color:var(--sub); margin-top:3px;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* 버튼: 🗑 숨기고 ✏️(수정모달에 삭제 포함) */
+    .tc-acts { }
+    .tc-acts button { font-size:21px; padding:4px 3px; min-width:34px; min-height:38px; }
+    .tc-acts .del-btn { display:none; }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style></head>
@@ -595,13 +622,14 @@ function renderList(rows){
       acts = `<button onclick="setStatus(${r.id},'입금대기')" title="입금대기로 전환">⏳</button>`
            + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
     }
+    const subParts = [r.program, r.people+'명', ...(amt?[amt.toLocaleString('ko-KR')+'원']:[]), ...(hasDeposit?['예약금 '+dep.toLocaleString('ko-KR')+'원']:[])];
     return `<tr class="${trCls}">
       <td class="tc-time">${esc(r.time_slot)||'-'}</td>
       <td class="tc-prog"><span class="pdot" style="background:${progColor(r.program)}"></span>${esc(r.program)}</td>
-      <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'} ${badge}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}</td>
+      <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'} ${badge}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}<div class="tc-msub"><span class="pdot" style="background:${progColor(r.program)}"></span>${subParts.map(esc).join(' · ')}</div></td>
       <td class="tc-ppl">${r.people}<small style="font-size:12px;color:var(--sub)">명</small></td>
       <td class="tc-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${hasDeposit?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</td>
-      <td class="tc-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button onclick="delRes(${r.id})" title="삭제">🗑</button></td>
+      <td class="tc-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button class="del-btn" onclick="delRes(${r.id})" title="삭제">🗑</button></td>
     </tr>`;
   }).join('');
   el.innerHTML = `<div class="tbl-wrap"><table class="restable">
