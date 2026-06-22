@@ -213,10 +213,11 @@ async def sync_naver_orders() -> int:
     since = (datetime.now(timezone.utc) - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     async with httpx.AsyncClient(timeout=15) as c:
+        # 1단계: 최근 15분 결제완료 상품주문 번호 목록
         r = await c.get(
-            f"{NAVER_API}/v1/pay-order/seller/orders",
+            f"{NAVER_API}/v1/pay-order/seller/product-orders/last-changed-statuses",
             headers=headers,
-            params={"lastChangedFrom": since, "lastChangedType": "PAYED", "limit": 300},
+            params={"lastChangedFrom": since, "lastChangedType": "PAYED"},
         )
         if r.status_code != 200:
             logger.warning(f"네이버 주문 목록 조회 실패: {r.status_code} {r.text[:300]}")
@@ -227,20 +228,27 @@ async def sync_naver_orders() -> int:
         if not new_ids:
             return 0
 
-        count = 0
-        for oid in new_ids:
-            try:
-                r2 = await c.get(f"{NAVER_API}/v1/pay-order/seller/product-orders/{oid}", headers=headers)
-                if r2.status_code != 200:
-                    continue
-                d = r2.json().get("data", {}).get("productOrder", {})
+        # 2단계: 상품주문 상세 일괄 조회
+        r2 = await c.post(
+            f"{NAVER_API}/v1/pay-order/seller/product-orders/query",
+            headers=headers,
+            json={"productOrderIds": new_ids},
+        )
+        if r2.status_code != 200:
+            logger.warning(f"네이버 주문 상세 조회 실패: {r2.status_code} {r2.text[:300]}")
+            return 0
 
-                # 중복 방지
+        count = 0
+        for item in r2.json().get("data", []):
+            d = item.get("productOrder", {})
+            oid = d.get("productOrderId")
+            if not oid:
+                continue
+            try:
                 if await _already_saved(oid):
                     _processed.add(oid)
                     continue
 
-                # 이용날짜 파싱
                 input_opts = d.get("inputOptions") or []
                 date_raw = next(
                     (x.get("inputValue", "") for x in input_opts if "날짜" in x.get("inputLabel", "")),
@@ -271,7 +279,7 @@ async def sync_naver_orders() -> int:
                     memo=f"스마트스토어#{oid[-8:]}",
                     amount=amount,
                     payment_method="계좌이체",
-                    deposit_amount=amount,  # 스마트스토어는 선결제
+                    deposit_amount=amount,
                 )
 
                 _processed.add(oid)
