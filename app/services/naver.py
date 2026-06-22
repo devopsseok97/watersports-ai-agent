@@ -40,12 +40,13 @@ async def _get_token() -> str:
     if _token_cache.get("token") and now < _token_cache.get("exp", 0) - 60:
         return _token_cache["token"]
 
-    cid = settings.naver_client_id
-    csec = settings.naver_client_secret
+    cid = settings.naver_client_id.strip()
+    csec = settings.naver_client_secret.strip()
     if not cid or not csec:
         raise ValueError("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 미설정")
 
     ts, sig = _sign(cid, csec)
+    logger.info(f"[네이버] client_id={cid[:6]}... ts={ts} sig={sig[:10]}...")
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.post(
             f"{NAVER_API}/v1/oauth2/token",
