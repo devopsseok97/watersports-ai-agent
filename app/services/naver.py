@@ -23,6 +23,7 @@ NAVER_API = "https://api.commerce.naver.com/external"
 
 _token_cache: dict = {}
 _processed: set[str] = set()  # 처리된 productOrderId (메모리)
+_last_ip_alert: float = 0  # IP 변경 알림 마지막 발송 시각
 
 
 # ── 인증 ──────────────────────────────────────────────────────────────────────
@@ -62,6 +63,12 @@ async def _get_token() -> str:
         )
         if r.status_code != 200:
             logger.error(f"네이버 토큰 오류 {r.status_code}: {r.text}")
+            if r.status_code == 403:
+                try:
+                    if r.json().get("code") == "GW.IP_NOT_ALLOWED":
+                        await _alert_ip_change()
+                except Exception:
+                    pass
             r.raise_for_status()
         d = r.json()
 
@@ -133,6 +140,35 @@ async def _already_saved(order_id: str) -> bool:
     client = await get_supabase()
     res = await client.table("reservations").select("id").ilike("memo", f"%{suffix}%").execute()
     return bool(res.data)
+
+
+# ── IP 변경 감지 알림 ────────────────────────────────────────────────────────────
+
+async def _alert_ip_change():
+    global _last_ip_alert
+    now = time.monotonic()
+    if now - _last_ip_alert < 3600:  # 1시간 쿨다운
+        return
+    _last_ip_alert = now
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            ip_r = await c.get("https://api.ipify.org?format=json")
+            current_ip = ip_r.json()["ip"]
+        payload = {
+            "blocks": [
+                {"type": "header", "text": {"type": "plain_text", "text": "⚠️ 네이버 API IP 변경 알림"}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": (
+                    f"서버 IP가 변경되어 네이버 스마트스토어 연동이 중단되었습니다.\n\n"
+                    f"*새 서버 IP:* `{current_ip}`\n\n"
+                    f"👉 *네이버 커머스API 센터* → 앱 수정 → API호출 IP를 `{current_ip}`로 변경 후 저장하세요."
+                )}},
+            ]
+        }
+        async with httpx.AsyncClient(timeout=5) as c:
+            await c.post(settings.slack_webhook_url, json=payload)
+        logger.warning(f"[네이버] IP 변경 감지 → 슬랙 알림 발송: {current_ip}")
+    except Exception as e:
+        logger.warning(f"IP 변경 알림 실패: {e}")
 
 
 # ── 슬랙 알림 ─────────────────────────────────────────────────────────────────
