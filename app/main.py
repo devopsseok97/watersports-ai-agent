@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
                     _log.info(f"네이버 주문 자동 등록: {n}건")
             except Exception as e:
                 _log.error(f"네이버 동기화 오류: {e}")
-            await asyncio.sleep(300)  # 5분마다
+            await asyncio.sleep(60)  # 1분마다
 
     tasks = [
         asyncio.create_task(_cleanup_loop()),
