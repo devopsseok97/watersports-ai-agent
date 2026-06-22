@@ -13,6 +13,7 @@ async def notify_inquiry(
     message: str,
     is_booking: bool = False,
     is_escalation: bool = False,
+    bot_reply: str = "",
 ):
     """모든 카카오 문의를 슬랙으로 알림.
 
@@ -47,6 +48,12 @@ async def notify_inquiry(
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": f"*고객 메시지:*\n>{message}"}
             },
+            *(
+                [{
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*AI 답변:*\n{bot_reply}"}
+                }] if bot_reply else []
+            ),
             {
                 "type": "context",
                 "elements": [{"type": "mrkdwn", "text": "카카오 채널 관리자센터에서 대화 전체를 볼 수 있어요 💬"}]

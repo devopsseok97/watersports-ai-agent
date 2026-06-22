@@ -66,6 +66,7 @@ async def kakao_webhook(request: Request):
             message=user_message,
             is_booking=is_booking_intent,
             is_escalation=is_escalation,
+            bot_reply=reply,
         )
     asyncio.create_task(_post_response())
 
