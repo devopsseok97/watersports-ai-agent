@@ -8,6 +8,7 @@ import hmac
 import logging
 import re
 import time
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -29,9 +30,8 @@ _processed: set[str] = set()  # 처리된 productOrderId (메모리)
 def _sign(client_id: str, client_secret: str) -> tuple[str, str]:
     ts = str(int(time.time() * 1000))
     msg = f"{client_id}_{ts}"
-    sig = base64.b64encode(
-        hmac.new(client_secret.encode(), msg.encode(), hashlib.sha256).digest()
-    ).decode()
+    digest = hmac.new(client_secret.encode("UTF-8"), msg.encode("UTF-8"), hashlib.sha256).digest()
+    sig = base64.b64encode(digest).decode("UTF-8")
     return ts, sig
 
 
@@ -47,17 +47,18 @@ async def _get_token() -> str:
 
     ts, sig = _sign(cid, csec)
     logger.info(f"[네이버] client_id={cid[:6]}... ts={ts} sig={sig[:10]}...")
+    body = urllib.parse.urlencode({
+        "grant_type": "client_credentials",
+        "client_id": cid,
+        "timestamp": ts,
+        "client_secret_sign": sig,
+        "type": "SELF",
+    })
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.post(
             f"{NAVER_API}/v1/oauth2/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "grant_type": "client_credentials",
-                "client_id": cid,
-                "timestamp": ts,
-                "client_secret_sign": sig,
-                "type": "SELF",
-            },
+            content=body.encode("UTF-8"),
         )
         if r.status_code != 200:
             logger.error(f"네이버 토큰 오류 {r.status_code}: {r.text}")
