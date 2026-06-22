@@ -3,13 +3,13 @@
 5분마다 최근 15분 결제완료 주문을 조회해 예약 DB에 자동 등록.
 """
 import base64
-import hashlib
-import hmac
 import logging
 import re
 import time
 import urllib.parse
 from datetime import datetime, timezone, timedelta
+
+import bcrypt
 
 import httpx
 
@@ -28,10 +28,10 @@ _processed: set[str] = set()  # 처리된 productOrderId (메모리)
 # ── 인증 ──────────────────────────────────────────────────────────────────────
 
 def _sign(client_id: str, client_secret: str) -> tuple[str, str]:
-    ts = str(int(time.time() * 1000))
-    msg = f"{client_id}_{ts}"
-    digest = hmac.new(client_secret.encode("UTF-8"), msg.encode("UTF-8"), hashlib.sha256).digest()
-    sig = base64.b64encode(digest).decode("UTF-8")
+    ts = str(int((time.time() - 3) * 1000))  # 3초 전 타임스탬프 (클럭 스큐 보정)
+    password = f"{client_id}_{ts}"
+    hashed = bcrypt.hashpw(password.encode("UTF-8"), client_secret.encode("UTF-8"))
+    sig = base64.b64encode(hashed).decode("UTF-8")
     return ts, sig
 
 
