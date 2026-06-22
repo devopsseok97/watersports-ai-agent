@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     kma_api_key: str
     slack_webhook_url: str
     kakao_secret_key: str = ""
-    admin_password: str = ""  # 사장님 대시보드 비밀번호 (미설정 시 인증 없음)
+    admin_password: str = ""
+    naver_client_id: str = ""
+    naver_client_secret: str = ""
 
     class Config:
         env_file = ".env"

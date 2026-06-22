@@ -26,11 +26,27 @@ async def lifespan(app: FastAPI):
                     _log.info(f"만료 앨범 자동 정리: {deleted}개 삭제")
             except Exception as e:
                 _log.error(f"만료 앨범 정리 오류: {e}")
-            await asyncio.sleep(3600)  # 1시간마다 실행
+            await asyncio.sleep(3600)
 
-    task = asyncio.create_task(_cleanup_loop())
+    async def _naver_sync_loop():
+        from app.services.naver import sync_naver_orders
+        await asyncio.sleep(10)  # 서버 기동 후 10초 대기
+        while True:
+            try:
+                n = await sync_naver_orders()
+                if n:
+                    _log.info(f"네이버 주문 자동 등록: {n}건")
+            except Exception as e:
+                _log.error(f"네이버 동기화 오류: {e}")
+            await asyncio.sleep(300)  # 5분마다
+
+    tasks = [
+        asyncio.create_task(_cleanup_loop()),
+        asyncio.create_task(_naver_sync_loop()),
+    ]
     yield
-    task.cancel()
+    for t in tasks:
+        t.cancel()
 
 
 app = FastAPI(title="WaterSports AI Agent", version="0.3.0", lifespan=lifespan)
