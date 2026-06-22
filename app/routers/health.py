@@ -39,12 +39,14 @@ async def naver_token_test():
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             content=body.encode("UTF-8"),
         )
+    csec_hex = csec.encode("UTF-8").hex()
     return {
         "status": r.status_code,
         "cid_prefix": cid[:4],
         "cid_len": len(cid),
         "csec_len": len(csec),
-        "ts": ts,
-        "sig_prefix": sig[:10],
+        "csec_hex": csec_hex,
+        "msg": msg,
+        "sig": sig,
         "response": r.json(),
     }
