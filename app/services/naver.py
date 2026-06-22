@@ -58,7 +58,9 @@ async def _get_token() -> str:
                 "type": "SELF",
             },
         )
-        r.raise_for_status()
+        if r.status_code != 200:
+            logger.error(f"네이버 토큰 오류 {r.status_code}: {r.text}")
+            r.raise_for_status()
         d = r.json()
 
     _token_cache["token"] = d["access_token"]
