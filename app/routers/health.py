@@ -26,33 +26,28 @@ async def naver_token_test():
     msg = f"{cid}_{ts}"
     digest = hmac.new(csec.encode("UTF-8"), msg.encode("UTF-8"), hashlib.sha256).digest()
     sig = base64.b64encode(digest).decode("UTF-8")
-    form_data = {
-        "grant_type": "client_credentials",
-        "client_id": cid,
-        "timestamp": ts,
-        "client_secret_sign": sig,
-        "type": "SELF",
-    }
-    body_encoded = urllib.parse.urlencode(form_data)
+    import base64 as _b64
 
-    # 방법 A: httpx data= 파라미터
+    sig_urlsafe = _b64.urlsafe_b64encode(digest).decode("UTF-8")
+
+    URL = "https://api.commerce.naver.com/external/v1/oauth2/token"
+    results = {}
+
     async with httpx.AsyncClient(timeout=10) as c:
-        r_a = await c.post(
-            "https://api.commerce.naver.com/external/v1/oauth2/token",
-            data=form_data,
-        )
-        # 방법 B: 수동 urlencode (기존 방식)
-        r_b = await c.post(
-            "https://api.commerce.naver.com/external/v1/oauth2/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            content=body_encoded.encode("UTF-8"),
-        )
+        # A: type=SELF + 표준 Base64
+        r = await c.post(URL, data={"grant_type": "client_credentials", "client_id": cid, "timestamp": ts, "client_secret_sign": sig, "type": "SELF"})
+        results["A_SELF_std"] = {"status": r.status_code, "res": r.json()}
 
-    return {
-        "sig": sig,
-        "body_sent": body_encoded,
-        "method_a_status": r_a.status_code,
-        "method_a_response": r_a.json(),
-        "method_b_status": r_b.status_code,
-        "method_b_response": r_b.json(),
-    }
+        # B: type 없음 + 표준 Base64
+        r = await c.post(URL, data={"grant_type": "client_credentials", "client_id": cid, "timestamp": ts, "client_secret_sign": sig})
+        results["B_notype_std"] = {"status": r.status_code, "res": r.json()}
+
+        # C: type=SELF + URL-safe Base64
+        r = await c.post(URL, data={"grant_type": "client_credentials", "client_id": cid, "timestamp": ts, "client_secret_sign": sig_urlsafe, "type": "SELF"})
+        results["C_SELF_urlsafe"] = {"status": r.status_code, "res": r.json()}
+
+        # D: type 없음 + URL-safe Base64
+        r = await c.post(URL, data={"grant_type": "client_credentials", "client_id": cid, "timestamp": ts, "client_secret_sign": sig_urlsafe})
+        results["D_notype_urlsafe"] = {"status": r.status_code, "res": r.json()}
+
+    return {"sig_std": sig, "sig_urlsafe": sig_urlsafe, "results": results}
