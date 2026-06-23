@@ -223,7 +223,12 @@ async def sync_naver_orders() -> int:
             logger.warning(f"네이버 주문 목록 조회 실패: {r.status_code} {r.text[:300]}")
             return 0
 
-        order_ids = [o.get("productOrderId") for o in r.json().get("data", []) if o.get("productOrderId")]
+        raw = r.json().get("data", [])
+        order_ids = [
+            o if isinstance(o, str) else o.get("productOrderId", "")
+            for o in raw
+        ]
+        order_ids = [oid for oid in order_ids if oid]
         new_ids = [oid for oid in order_ids if oid not in _processed]
         if not new_ids:
             return 0
