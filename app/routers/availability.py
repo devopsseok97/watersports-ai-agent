@@ -487,15 +487,21 @@ function toggleTheme(){
 function setDay(offset){
   const d = new Date();
   d.setDate(d.getDate()+offset);
-  dateEl.value = d.toISOString().slice(0,10);
+  dateEl.value = localDate(d);
   loadDay();
 }
 function shiftDay(delta){
-  const base = dateEl.value || new Date().toISOString().slice(0,10);
+  const base = dateEl.value || localToday();
   const d = new Date(base + 'T00:00:00');
   d.setDate(d.getDate()+delta);
-  dateEl.value = d.toISOString().slice(0,10);
+  dateEl.value = localDate(d);
   loadDay();
+}
+function localDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function localToday(){
+  return localDate(new Date());
 }
 
 let ROWS = [];
