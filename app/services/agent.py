@@ -209,17 +209,24 @@ class AgentService:
         ]
 
         try:
-            response = await self.client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=450,
-                system=system_blocks,
-                messages=history,
-                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+            response = await asyncio.wait_for(
+                self.client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=400,
+                    system=system_blocks,
+                    messages=history,
+                    extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+                ),
+                timeout=4.0,  # 카카오톡 5초 제한 안에 응답
             )
             reply = response.content[0].text
 
+        except asyncio.TimeoutError:
+            logger.warning(f"AI 응답 타임아웃 [{user_id}]")
+            reply = "죄송해요, 응답이 잠깐 지연됐어요!\n전화로 문의해 주시면 바로 안내해 드릴게요 📞 010-6547-1067"
         except Exception as e:
-            reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞"
+            logger.error(f"AI 응답 오류: {e}")
+            reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
 
         # 대화 기록에 AI 응답 추가
         conversation_history[user_id].append({"role": "assistant", "content": reply})

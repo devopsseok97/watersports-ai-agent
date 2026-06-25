@@ -308,7 +308,9 @@ ADMIN_HTML = """<!DOCTYPE html>
 </header>
 <main>
   <div class="datebar">
+    <button class="quick" onclick="shiftDay(-1)" style="font-size:20px;padding:10px 14px;">‹</button>
     <input type="date" id="date">
+    <button class="quick" onclick="shiftDay(1)" style="font-size:20px;padding:10px 14px;">›</button>
     <button class="quick" onclick="setDay(0)">오늘</button>
     <button class="quick" onclick="setDay(1)">내일</button>
     <button class="quick" onclick="setDay(2)">모레</button>
@@ -485,6 +487,13 @@ function toggleTheme(){
 function setDay(offset){
   const d = new Date();
   d.setDate(d.getDate()+offset);
+  dateEl.value = d.toISOString().slice(0,10);
+  loadDay();
+}
+function shiftDay(delta){
+  const base = dateEl.value || new Date().toISOString().slice(0,10);
+  const d = new Date(base + 'T00:00:00');
+  d.setDate(d.getDate()+delta);
   dateEl.value = d.toISOString().slice(0,10);
   loadDay();
 }
