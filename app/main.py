@@ -40,9 +40,27 @@ async def lifespan(app: FastAPI):
                 _log.error(f"네이버 동기화 오류: {e}")
             await asyncio.sleep(60)  # 1분마다
 
+    async def _cache_refresh_loop():
+        # 챗봇 요청 경로의 지연을 없애기 위해 날씨·잔여석을 미리 갱신해 둔다.
+        # 잔여석: 60초마다 / 날씨: 30분마다 (KMA API 호출 절약)
+        from app.services.agent import refresh_weather_cache, refresh_availability_cache
+        await refresh_weather_cache()       # 기동 시 1회 즉시 채움
+        await refresh_availability_cache()
+        i = 0
+        while True:
+            await asyncio.sleep(60)
+            try:
+                await refresh_availability_cache()
+                i += 1
+                if i % 30 == 0:             # 30분마다 날씨 갱신
+                    await refresh_weather_cache()
+            except Exception as e:
+                _log.error(f"캐시 갱신 루프 오류: {e}")
+
     tasks = [
         asyncio.create_task(_cleanup_loop()),
         asyncio.create_task(_naver_sync_loop()),
+        asyncio.create_task(_cache_refresh_loop()),
     ]
     yield
     for t in tasks:

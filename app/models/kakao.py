@@ -9,6 +9,8 @@ class KakaoUser(BaseModel):
 class KakaoUserRequest(BaseModel):
     utterance: str
     user: KakaoUser
+    # 콜백 블록이 활성화된 경우에만 카카오가 채워 보냄. 없으면 동기 응답.
+    callbackUrl: Optional[str] = None
 
 
 class KakaoBot(BaseModel):

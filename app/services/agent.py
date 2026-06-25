@@ -1,35 +1,49 @@
 import time
+import logging
 import anthropic
 from app.config import settings
 from app.services.weather import get_operation_status
 from app.services.availability import build_availability_text, today_str
 
+logger = logging.getLogger(__name__)
+
 # 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
+# ── 중요: 외부 API(KMA/Supabase) 호출은 백그라운드 루프(main.py)에서만 수행한다.
+#         카카오 요청 경로에서는 절대 await 하지 않고 캐시 값만 즉시 읽는다.
+#         (요청당 추가 지연 ≈ 0초 → 5초 카카오 타임아웃 안전)
 _cache: dict = {}
-_WEATHER_TTL = 1800  # 30분
-_AVAIL_TTL   = 60    # 1분
+_WEATHER_TTL = 1800  # 30분 (참고용)
+_AVAIL_TTL   = 60    # 1분 (참고용)
 
 
-async def _cached_weather() -> str:
-    now = time.monotonic()
-    if "weather" not in _cache or now - _cache["weather"][0] > _WEATHER_TTL:
-        try:
-            val = await get_operation_status()
-        except Exception:
-            val = ""
-        _cache["weather"] = (now, val)
-    return _cache["weather"][1]
+# ── 백그라운드 갱신 (main.py lifespan 루프에서 호출) ──────────────────────────
+
+async def refresh_weather_cache() -> None:
+    """날씨/운영상태 캐시 갱신. 실패해도 직전 값 유지."""
+    try:
+        val = await get_operation_status()
+        _cache["weather"] = (time.monotonic(), val)
+    except Exception as e:
+        logger.warning(f"날씨 캐시 갱신 실패(직전 값 유지): {e}")
 
 
-async def _cached_availability() -> str:
-    now = time.monotonic()
-    if "avail" not in _cache or now - _cache["avail"][0] > _AVAIL_TTL:
-        try:
-            val = await build_availability_text()
-        except Exception:
-            val = ""
-        _cache["avail"] = (now, val)
-    return _cache["avail"][1]
+async def refresh_availability_cache() -> None:
+    """잔여석 캐시 갱신. 실패해도 직전 값 유지."""
+    try:
+        val = await build_availability_text()
+        _cache["avail"] = (time.monotonic(), val)
+    except Exception as e:
+        logger.warning(f"잔여석 캐시 갱신 실패(직전 값 유지): {e}")
+
+
+# ── 읽기 전용 getter (요청 경로에서 사용, 외부 호출 없음) ──────────────────────
+
+def get_cached_weather() -> str:
+    return _cache.get("weather", (0, ""))[1]
+
+
+def get_cached_availability() -> str:
+    return _cache.get("avail", (0, ""))[1]
 
 # 업체별 설정 (나중에 DB로 이전)
 SHOP_CONFIG = {
@@ -181,11 +195,9 @@ class AgentService:
     async def get_reply(self, user_id: str, message: str, shop_key: str = "default") -> str:
         import asyncio
 
-        # 날씨·잔여석 캐시에서 병렬 조회
-        weather_status, availability_status = await asyncio.gather(
-            _cached_weather(),
-            _cached_availability(),
-        )
+        # 날씨·잔여석: 백그라운드가 미리 채워둔 캐시만 즉시 읽음 (외부 호출 없음 → 지연 0)
+        weather_status = get_cached_weather()
+        availability_status = get_cached_availability()
 
         # 대화 기록 초기화
         if user_id not in conversation_history:
