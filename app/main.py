@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(level=logging.INFO)
 from pathlib import Path
 
 from fastapi import FastAPI
