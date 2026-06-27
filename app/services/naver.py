@@ -196,6 +196,37 @@ async def _slack_new_order(name: str, date: str, program: str, time_slot: str,
         logger.warning(f"슬랙 알림 실패: {e}")
 
 
+# ── 주문 상세 조회 (일괄 → 개별 폴백) ─────────────────────────────────────────
+
+async def _query_orders(c: httpx.AsyncClient, headers: dict, ids: list[str]) -> list[dict]:
+    """상품주문 상세 일괄 조회. 실패 시 개별 조회로 폴백하고 권한 없는 ID는 재시도 차단."""
+    r = await c.post(
+        f"{NAVER_API}/v1/pay-order/seller/product-orders/query",
+        headers=headers,
+        json={"productOrderIds": ids},
+    )
+    if r.status_code == 200:
+        return r.json().get("data", [])
+
+    logger.warning(f"네이버 주문 일괄 조회 실패({r.status_code}), 개별 조회로 전환")
+    results = []
+    for oid in ids:
+        try:
+            r2 = await c.post(
+                f"{NAVER_API}/v1/pay-order/seller/product-orders/query",
+                headers=headers,
+                json={"productOrderIds": [oid]},
+            )
+            if r2.status_code == 200:
+                results.extend(r2.json().get("data", []))
+            else:
+                logger.warning(f"주문 개별 조회 실패 ({oid}): {r2.status_code}")
+                _processed.add(oid)  # 권한 없는 주문은 재시도 차단
+        except Exception as e:
+            logger.warning(f"주문 개별 조회 오류 ({oid}): {e}")
+    return results
+
+
 # ── 메인 동기화 ───────────────────────────────────────────────────────────────
 
 async def sync_naver_orders() -> int:
@@ -233,18 +264,11 @@ async def sync_naver_orders() -> int:
         if not new_ids:
             return 0
 
-        # 2단계: 상품주문 상세 일괄 조회
-        r2 = await c.post(
-            f"{NAVER_API}/v1/pay-order/seller/product-orders/query",
-            headers=headers,
-            json={"productOrderIds": new_ids},
-        )
-        if r2.status_code != 200:
-            logger.warning(f"네이버 주문 상세 조회 실패: {r2.status_code} {r2.text[:300]}")
-            return 0
+        # 2단계: 상품주문 상세 일괄 조회 → 실패 시 개별 조회로 폴백
+        items = await _query_orders(c, headers, new_ids)
 
         count = 0
-        for item in r2.json().get("data", []):
+        for item in items:
             d = item.get("productOrder", {})
             oid = d.get("productOrderId")
             if not oid:
