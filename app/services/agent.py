@@ -253,7 +253,7 @@ class AgentService:
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
                 ),
-                timeout=4.0,  # 카카오톡 5초 제한 안에 응답
+                timeout=4.8,  # 카카오톡 5초 제한 안에 응답
             )
             reply = response.content[0].text
 
