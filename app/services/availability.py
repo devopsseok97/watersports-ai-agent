@@ -337,7 +337,7 @@ async def get_day_summary(date_str: str) -> list[dict]:
 
 # ────────────────────────────── 챗봇 주입 텍스트 ──────────────────────────────
 
-async def build_availability_text(days: int = 7) -> str:
+async def build_availability_text(days: int = 30) -> str:
     """시스템 프롬프트에 주입할 잔여 좌석 요약.
 
     예약 건들을 슬롯별로 합산해 잔여/마감만 표시.
