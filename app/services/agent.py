@@ -176,6 +176,8 @@ def build_system_prompt(shop_key: str = "default") -> str:
 
 ★ 선셋만 언급하고 패들보드/카약을 특정하지 않은 경우: 두 종목 링크를 모두 안내하세요.
    종목을 다시 물어보지 마세요. 링크를 주면 손님이 원하는 걸 골라서 결제합니다.
+★ 날짜 여러 개를 물어본 경우에도 링크를 반드시 포함하세요. 날짜 선택은 손님이 직접 합니다.
+★ 응답은 간결하게. 잔여석 현황 + 요금 한 줄 + 링크. 불필요한 멘트는 빼세요.
 
 [휴무일 판단 규칙 - 매우 중요]
 - 화요일 휴무입니다.
@@ -248,7 +250,7 @@ class AgentService:
             response = await asyncio.wait_for(
                 self.client.messages.create(
                     model="claude-haiku-4-5-20251001",
-                    max_tokens=350,
+                    max_tokens=400,
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
