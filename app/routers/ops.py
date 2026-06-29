@@ -69,6 +69,17 @@ async def logout():
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
+@router.get("/api/naver-debug")
+async def api_naver_debug(
+    hours: int = 24,
+    opsess: str | None = Cookie(default=None),
+):
+    if not _verify(opsess):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    from app.services.naver import debug_sync
+    return await debug_sync(hours=hours)
+
+
 @router.get("/api/status")
 async def api_status(opsess: str | None = Cookie(default=None)):
     if not _verify(opsess):
@@ -371,6 +382,7 @@ function render(d) {
       <div class="row"><span class="rk">API 토큰</span><span class="rv ${n.token_valid?'ok':'warn'}">${n.token_valid?'유효':'만료/미발급'}</span></div>
       <div class="row"><span class="rk">처리된 주문</span><span class="rv">${n.processed_count}건 (세션)</span></div>
       <div class="row"><span class="rk">IP 변경 알림</span><span class="rv ${n.last_ip_alert?'warn':'ok'}">${n.last_ip_alert?'발생한 적 있음':'없음'}</span></div>
+      <button class="rbtn" style="margin-top:10px;width:100%" onclick="naverDebug()">🔍 동기화 진단 실행</button>
     </div>
 
     <div class="box">
@@ -380,12 +392,61 @@ function render(d) {
       <div class="row"><a href="/dashboard/" style="color:var(--accent);text-decoration:none;font-weight:700">📊 분석 대시보드</a></div>
       <div class="row"><a href="/health" style="color:var(--accent);text-decoration:none;font-weight:700">❤️ 헬스체크 API</a></div>
     </div>`;
+  // 진단 박스 초기화
+  if (!document.getElementById('naver-debug-box')) {
+    const nb = document.createElement('div');
+    nb.id = 'naver-debug-box';
+    nb.className = 'box';
+    nb.style.cssText = 'grid-column:1/-1;display:none';
+    nb.innerHTML = '<h2>🔍 네이버 동기화 진단</h2><div id="naver-debug-body" class="preview" style="max-height:400px;font-size:13px"></div>';
+    document.getElementById('grid').appendChild(nb);
+  }
 }
 
 function chip(ok, label) {
   return `<div class="chip"><span class="dot ${ok?'ok':'err'}"></span>${label}</div>`;
 }
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function naverDebug() {
+  const box = document.getElementById('naver-debug-box');
+  const body = document.getElementById('naver-debug-body');
+  box.style.display = '';
+  body.textContent = '조회 중 (최대 15초)…';
+  try {
+    const r = await fetch('api/naver-debug?hours=24');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    let out = '';
+    out += `토큰: ${d.token_ok ? '✅ 유효' : '❌ ' + (d.token_error||'오류')}\n`;
+    out += `조회 창: 최근 ${d.window_hours}시간\n\n`;
+    out += '== 상태별 주문 건수 ==\n';
+    for (const [k,v] of Object.entries(d.status_counts||{})) {
+      out += `  ${k}: ${v}건\n`;
+    }
+    out += `\nPAYED 주문 ID (최대 20): ${(d.payed_ids||[]).length}건\n`;
+    if ((d.payed_ids||[]).length) out += d.payed_ids.map(i=>'  '+i).join('\n') + '\n';
+    if (d.detail_error) out += `\n상세 조회 오류: ${d.detail_error}\n`;
+    if ((d.details||[]).length) {
+      out += '\n== 주문 상세 ==\n';
+      for (const item of d.details) {
+        out += `\n[${item.productOrderId}]\n`;
+        out += `  상품: ${item.productName}\n`;
+        out += `  옵션: ${item.productOption}\n`;
+        out += `  날짜(raw): ${item.date_raw} → 파싱: ${item.date_parsed||'실패'}\n`;
+        out += `  종목: ${item.program_parsed}\n`;
+        out += `  고객: ${item.orderer_name||'(이름 없음)'} / ${item.quantity}명 / ${(item.totalPaymentAmount||0).toLocaleString()}원\n`;
+        out += `  inputOptions: ${JSON.stringify(item.inputOptions)}\n`;
+        out += `  DB저장: ${item.already_in_db?'✅ 이미 등록':'❌ 미등록'} | 캐시: ${item.in_processed_cache?'처리됨':'미처리'}\n`;
+      }
+    } else if (!d.detail_error) {
+      out += '\n(PAYED 주문 없음 또는 상세 조회 생략)';
+    }
+    body.textContent = out;
+  } catch(e) {
+    body.textContent = '오류: ' + e.message;
+  }
+}
 
 load();
 setInterval(load, 30000);

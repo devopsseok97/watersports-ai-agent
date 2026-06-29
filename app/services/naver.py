@@ -255,17 +255,22 @@ async def sync_naver_orders() -> int:
             return 0
 
         raw = r.json().get("data", [])
+        # API가 data를 dict로 반환하는 경우 대비 (lastChangedProductOrders 키 확인)
+        if isinstance(raw, dict):
+            raw = raw.get("lastChangedProductOrders") or raw.get("productOrders") or []
         order_ids = [
             o if isinstance(o, str) else o.get("productOrderId", "")
-            for o in raw
+            for o in (raw or [])
         ]
         order_ids = [oid for oid in order_ids if oid]
+        logger.info(f"[네이버] PAYED 주문 {len(order_ids)}건 (15분 창), 미처리: {len([i for i in order_ids if i not in _processed])}건")
         new_ids = [oid for oid in order_ids if oid not in _processed]
         if not new_ids:
             return 0
 
         # 2단계: 상품주문 상세 일괄 조회 → 실패 시 개별 조회로 폴백
         items = await _query_orders(c, headers, new_ids)
+        logger.info(f"[네이버] 상세 조회 결과 {len(items)}건")
 
         count = 0
         for item in items:
@@ -293,10 +298,12 @@ async def sync_naver_orders() -> int:
                 program = _parse_program(product_name, option_str)
                 time_slot = _parse_time(option_str)
 
-                orderer = d.get("orderer") or d.get("buyer") or {}
+                orderer = item.get("order", {}).get("orderer", {}) or d.get("orderer") or {}
                 customer_name = orderer.get("name", "")
                 people = max(int(d.get("quantity", 1)), 1)
                 amount = int(d.get("totalPaymentAmount", 0))
+
+                logger.info(f"[네이버] 등록 시도: {oid[-8:]} {customer_name} {date_str} {program} {people}명 {amount}원")
 
                 await av.add_reservation(
                     date_str=date_str,
@@ -313,10 +320,96 @@ async def sync_naver_orders() -> int:
 
                 _processed.add(oid)
                 count += 1
-                logger.info(f"네이버 주문 자동 등록: {oid} → {customer_name} {date_str} {program}")
+                logger.info(f"네이버 주문 자동 등록 완료: {oid} → {customer_name} {date_str} {program}")
                 await _slack_new_order(customer_name, date_str, program, time_slot, people, amount, oid)
 
             except Exception as e:
-                logger.error(f"네이버 주문 처리 실패 ({oid}): {e}")
+                logger.error(f"네이버 주문 처리 실패 ({oid}): {e}", exc_info=True)
 
     return count
+
+
+# ── 진단용 넓은 창 동기화 ──────────────────────────────────────────────────────
+
+async def debug_sync(hours: int = 24) -> dict:
+    """진단용 동기화. hours 시간 창으로 주문 현황 상세 반환 (실제 등록은 안 함)."""
+    result: dict = {
+        "token_ok": False,
+        "token_error": None,
+        "window_hours": hours,
+        "status_counts": {},
+        "payed_ids": [],
+        "details": [],
+        "detail_error": None,
+    }
+
+    try:
+        tok = await _get_token()
+        result["token_ok"] = True
+    except Exception as e:
+        result["token_error"] = str(e)
+        return result
+
+    headers = {"Authorization": f"Bearer {tok}"}
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    async with httpx.AsyncClient(timeout=15) as c:
+        for st in ["PAYED", "PAYMENT_WAITING", "DISPATCHED", "DELIVERING", "DELIVERED"]:
+            try:
+                r = await c.get(
+                    f"{NAVER_API}/v1/pay-order/seller/product-orders/last-changed-statuses",
+                    headers=headers,
+                    params={"lastChangedFrom": since, "lastChangedType": st},
+                )
+                if r.status_code == 200:
+                    raw = r.json().get("data", [])
+                    if isinstance(raw, dict):
+                        raw = raw.get("lastChangedProductOrders") or raw.get("productOrders") or []
+                    ids = [o if isinstance(o, str) else o.get("productOrderId", "") for o in (raw or [])]
+                    ids = [i for i in ids if i]
+                    result["status_counts"][st] = len(ids)
+                    if st == "PAYED":
+                        result["payed_ids"] = ids[:20]
+                else:
+                    result["status_counts"][st] = f"오류 {r.status_code}"
+            except Exception as e:
+                result["status_counts"][st] = f"예외: {e}"
+
+        # 상세 조회 (PAYED 최대 10건)
+        payed_ids = result.get("payed_ids", [])[:10]
+        if payed_ids:
+            try:
+                items = await _query_orders(c, headers, payed_ids)
+                for item in items:
+                    d = item.get("productOrder", {})
+                    order = item.get("order", {})
+                    oid = d.get("productOrderId", "")
+                    input_opts = d.get("inputOptions") or []
+                    date_raw = next(
+                        (x.get("inputValue", "") for x in input_opts if "날짜" in x.get("inputLabel", "")),
+                        ""
+                    )
+                    already = False
+                    try:
+                        already = await _already_saved(oid) if oid else False
+                    except Exception:
+                        pass
+                    result["details"].append({
+                        "productOrderId": oid,
+                        "productName": (d.get("productName") or "")[:60],
+                        "productOption": (d.get("productOption") or "")[:60],
+                        "quantity": d.get("quantity"),
+                        "totalPaymentAmount": d.get("totalPaymentAmount"),
+                        "orderDate": (d.get("orderDate") or "")[:19],
+                        "inputOptions": input_opts[:5],
+                        "date_raw": date_raw,
+                        "date_parsed": _parse_date(date_raw),
+                        "program_parsed": _parse_program(d.get("productName") or "", d.get("productOption") or ""),
+                        "orderer_name": (order.get("orderer") or {}).get("name", ""),
+                        "already_in_db": already,
+                        "in_processed_cache": oid in _processed,
+                    })
+            except Exception as e:
+                result["detail_error"] = str(e)
+
+    return result
