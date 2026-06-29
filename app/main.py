@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import kakao, health, admin, photos, availability, dashboard
+from app.routers import kakao, health, admin, photos, availability, dashboard, ops
 from app.config import settings
 
 _log = logging.getLogger(__name__)
@@ -82,6 +82,7 @@ app.include_router(admin.router, prefix="/admin")
 app.include_router(photos.router, prefix="/photos")
 app.include_router(availability.router, prefix="/availability")
 app.include_router(dashboard.router, prefix="/dashboard")
+app.include_router(ops.router, prefix="/ops")
 
 _static_dir = Path(__file__).parent.parent / "static"
 if _static_dir.exists():

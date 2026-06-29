@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     slack_webhook_url: str
     kakao_secret_key: str = ""
     admin_password: str = ""
+    ops_password: str = ""
     naver_client_id: str = ""
     naver_client_secret: str = ""
 
