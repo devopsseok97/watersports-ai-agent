@@ -418,29 +418,29 @@ async function naverDebug() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     let out = '';
-    out += `토큰: ${d.token_ok ? '✅ 유효' : '❌ ' + (d.token_error||'오류')}\n`;
-    out += `조회 창: 최근 ${d.window_hours}시간\n\n`;
-    out += '== 상태별 주문 건수 ==\n';
+    out += '토큰: ' + (d.token_ok ? '✅ 유효' : '❌ ' + (d.token_error||'오류')) + '\\n';
+    out += '조회 창: 최근 ' + d.window_hours + '시간\\n\\n';
+    out += '== 상태별 주문 건수 ==\\n';
     for (const [k,v] of Object.entries(d.status_counts||{})) {
-      out += `  ${k}: ${v}건\n`;
+      out += '  ' + k + ': ' + v + '건\\n';
     }
-    out += `\nPAYED 주문 ID (최대 20): ${(d.payed_ids||[]).length}건\n`;
-    if ((d.payed_ids||[]).length) out += d.payed_ids.map(i=>'  '+i).join('\n') + '\n';
-    if (d.detail_error) out += `\n상세 조회 오류: ${d.detail_error}\n`;
+    out += '\\nPAYED 주문 ID (최대 20): ' + (d.payed_ids||[]).length + '건\\n';
+    if ((d.payed_ids||[]).length) out += d.payed_ids.map(i=>'  '+i).join('\\n') + '\\n';
+    if (d.detail_error) out += '\\n상세 조회 오류: ' + d.detail_error + '\\n';
     if ((d.details||[]).length) {
-      out += '\n== 주문 상세 ==\n';
+      out += '\\n== 주문 상세 ==\\n';
       for (const item of d.details) {
-        out += `\n[${item.productOrderId}]\n`;
-        out += `  상품: ${item.productName}\n`;
-        out += `  옵션: ${item.productOption}\n`;
-        out += `  날짜(raw): ${item.date_raw} → 파싱: ${item.date_parsed||'실패'}\n`;
-        out += `  종목: ${item.program_parsed}\n`;
-        out += `  고객: ${item.orderer_name||'(이름 없음)'} / ${item.quantity}명 / ${(item.totalPaymentAmount||0).toLocaleString()}원\n`;
-        out += `  inputOptions: ${JSON.stringify(item.inputOptions)}\n`;
-        out += `  DB저장: ${item.already_in_db?'✅ 이미 등록':'❌ 미등록'} | 캐시: ${item.in_processed_cache?'처리됨':'미처리'}\n`;
+        out += '\\n[' + item.productOrderId + ']\\n';
+        out += '  상품: ' + item.productName + '\\n';
+        out += '  옵션: ' + item.productOption + '\\n';
+        out += '  날짜(raw): ' + item.date_raw + ' → 파싱: ' + (item.date_parsed||'실패') + '\\n';
+        out += '  종목: ' + item.program_parsed + '\\n';
+        out += '  고객: ' + (item.orderer_name||'(이름 없음)') + ' / ' + item.quantity + '명 / ' + (item.totalPaymentAmount||0).toLocaleString() + '원\\n';
+        out += '  inputOptions: ' + JSON.stringify(item.inputOptions) + '\\n';
+        out += '  DB저장: ' + (item.already_in_db?'✅ 이미 등록':'❌ 미등록') + ' | 캐시: ' + (item.in_processed_cache?'처리됨':'미처리') + '\\n';
       }
     } else if (!d.detail_error) {
-      out += '\n(PAYED 주문 없음 또는 상세 조회 생략)';
+      out += '\\n(PAYED 주문 없음 또는 상세 조회 생략)';
     }
     body.textContent = out;
   } catch(e) {
