@@ -456,6 +456,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <a href="/admin/" class="active">🏠 홈</a>
     <a href="/availability/admin">📅 예약</a>
     <a href="/photos/admin">📸 사진</a>
+    <a href="/dashboard/">📊 분석</a>
   </nav>
 </header>
 <main>

@@ -304,6 +304,7 @@ ADMIN_HTML = """<!DOCTYPE html>
     <a href="/admin/">🏠 홈</a>
     <a href="/availability/admin" class="active">📅 예약</a>
     <a href="/photos/admin">📸 사진</a>
+    <a href="/dashboard/">📊 분석</a>
   </nav>
 </header>
 <main>
