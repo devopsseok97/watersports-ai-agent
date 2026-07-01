@@ -286,12 +286,12 @@ class AgentService:
             response = await asyncio.wait_for(
                 self.client.messages.create(
                     model="claude-haiku-4-5-20251001",
-                    max_tokens=400,
+                    max_tokens=350,
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
                 ),
-                timeout=4.8,  # 카카오톡 5초 제한 안에 응답
+                timeout=3.5,  # 카카오톡 5초 제한 - 네트워크 왕복(~1.5s) 여유분 확보
             )
             reply = response.content[0].text
 

@@ -1,16 +1,17 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-
-logging.basicConfig(level=logging.INFO)
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import kakao, health, admin, photos, availability, dashboard, ops
 from app.config import settings
+
+logging.basicConfig(level=logging.INFO)
 
 _log = logging.getLogger(__name__)
 if not getattr(settings, "admin_password", ""):
@@ -59,10 +60,24 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 _log.error(f"캐시 갱신 루프 오류: {e}")
 
+    async def _keepalive_loop():
+        # Railway 서비스가 유휴 상태로 cold start되지 않도록 4분마다 자기 자신에 핑
+        if not settings.self_url:
+            return
+        await asyncio.sleep(120)  # 기동 후 2분 뒤부터 시작
+        while True:
+            try:
+                async with httpx.AsyncClient(timeout=5) as c:
+                    await c.get(f"{settings.self_url}/health")
+            except Exception as e:
+                _log.warning(f"keep-alive 핑 실패: {e}")
+            await asyncio.sleep(240)  # 4분마다
+
     tasks = [
         asyncio.create_task(_cleanup_loop()),
         asyncio.create_task(_naver_sync_loop()),
         asyncio.create_task(_cache_refresh_loop()),
+        asyncio.create_task(_keepalive_loop()),
     ]
     yield
     for t in tasks:

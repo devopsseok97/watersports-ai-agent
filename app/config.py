@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ops_password: str = ""
     naver_client_id: str = ""
     naver_client_secret: str = ""
+    self_url: str = "https://web-production-9282c.up.railway.app"
 
     class Config:
         env_file = ".env"
