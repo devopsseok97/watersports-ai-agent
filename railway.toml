@@ -4,4 +4,5 @@ builder = "NIXPACKS"
 [deploy]
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
+# 재시작 3회 제한 → 외부 장애(Supabase/Anthropic) 시 서비스 영구 정지 위험이 있어 상향 (2026-07-04 검수)
+restartPolicyMaxRetries = 30
