@@ -320,7 +320,7 @@ class AgentService:
             response = await asyncio.wait_for(
                 self.client.messages.create(
                     model=MODEL,
-                    max_tokens=350,
+                    max_tokens=280,
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
