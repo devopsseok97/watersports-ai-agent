@@ -46,15 +46,23 @@ async def lifespan(app: FastAPI):
     async def _cache_refresh_loop():
         # 챗봇 요청 경로의 지연을 없애기 위해 날씨·잔여석을 미리 갱신해 둔다.
         # 잔여석: 60초마다 / 날씨: 30분마다 (KMA API 호출 절약)
-        from app.services.agent import refresh_weather_cache, refresh_availability_cache
+        # Anthropic 프롬프트 캐시(TTL 5분): 4분마다 워밍 → 첫 메시지 타임아웃 방지
+        from app.services.agent import (
+            refresh_weather_cache,
+            refresh_availability_cache,
+            warm_anthropic_cache,
+        )
         await refresh_weather_cache()       # 기동 시 1회 즉시 채움
         await refresh_availability_cache()
+        await warm_anthropic_cache()
         i = 0
         while True:
             await asyncio.sleep(60)
             try:
                 await refresh_availability_cache()
                 i += 1
+                if i % 4 == 0:              # 4분마다 프롬프트 캐시 워밍 (TTL 5분)
+                    await warm_anthropic_cache()
                 if i % 30 == 0:             # 30분마다 날씨 갱신
                     await refresh_weather_cache()
             except Exception as e:

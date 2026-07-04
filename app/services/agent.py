@@ -7,6 +7,8 @@ from app.services.availability import build_availability_text, today_str
 
 logger = logging.getLogger(__name__)
 
+MODEL = "claude-haiku-4-5-20251001"  # 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
+
 # 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
 # ── 중요: 외부 API(KMA/Supabase) 호출은 백그라운드 루프(main.py)에서만 수행한다.
 #         카카오 요청 경로에서는 절대 await 하지 않고 캐시 값만 즉시 읽는다.
@@ -34,6 +36,38 @@ async def refresh_availability_cache() -> None:
         _cache["avail"] = (time.monotonic(), val)
     except Exception as e:
         logger.warning(f"잔여석 캐시 갱신 실패(직전 값 유지): {e}")
+
+
+_warm_client: "anthropic.AsyncAnthropic | None" = None
+
+
+async def warm_anthropic_cache() -> None:
+    """Anthropic 프롬프트 캐시(TTL 5분) 워밍.
+
+    5분 넘게 대화가 없으면 캐시가 식어 첫 메시지가 3.5초 타임아웃에 걸리고
+    두 번째 메시지부터 정상 응답하는 문제가 있었다. 4분마다 max_tokens=1짜리
+    초소형 요청으로 캐시를 데워두면 첫 메시지도 항상 캐시 히트 → 즉시 응답.
+    get_reply와 동일한 정적 system 블록·모델을 써야 같은 캐시를 공유한다.
+    """
+    global _warm_client
+    try:
+        if _warm_client is None:
+            _warm_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        await _warm_client.messages.create(
+            model=MODEL,
+            max_tokens=1,
+            system=[
+                {
+                    "type": "text",
+                    "text": build_system_prompt(),
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            messages=[{"role": "user", "content": "."}],
+            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+        )
+    except Exception as e:
+        logger.warning(f"프롬프트 캐시 워밍 실패: {e}")
 
 
 # ── 읽기 전용 getter (요청 경로에서 사용, 외부 호출 없음) ──────────────────────
@@ -285,13 +319,13 @@ class AgentService:
         try:
             response = await asyncio.wait_for(
                 self.client.messages.create(
-                    model="claude-haiku-4-5-20251001",
+                    model=MODEL,
                     max_tokens=350,
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
                 ),
-                timeout=3.5,  # 카카오톡 5초 제한 - 네트워크 왕복(~1.5s) 여유분 확보
+                timeout=4.2,  # 카카오톡 5초 제한 - 네트워크 왕복(~0.8s) 여유분 확보
             )
             reply = response.content[0].text
 
