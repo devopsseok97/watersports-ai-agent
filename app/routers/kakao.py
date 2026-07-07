@@ -94,28 +94,60 @@ async def _safe_reply(
 CALLBACK_TIMEOUT_SEC = 50.0   # Anthropic 응답 최대 대기 (여유분 10초)
 CALLBACK_MAX_TOKENS = 450     # 정확도 우선 - 상세 안내에 충분한 여유
 
+_user_locks: dict[str, asyncio.Lock] = {}
 
-async def _dispatch_callback(callback_url: str, user_id: str, user_message: str):
+def _get_user_lock(user_id: str) -> asyncio.Lock:
+    """유저별 asyncio Lock 반환 (메모리 누수 방지용 주기적 정리 포함)"""
+    lock = _user_locks.get(user_id)
+    if lock is None:
+        if len(_user_locks) >= _MAX_TRACKED_USERS:
+            # 사용 중이지 않은 (locked 상태가 아닌) Lock 객체들 정리
+            stale_keys = [k for k, l in _user_locks.items() if not l.locked()]
+            for k in stale_keys:
+                _user_locks.pop(k, None)
+            # 여전히 초과 시 강제 확보를 위해 가장 오래된 항목 제거
+            while len(_user_locks) >= _MAX_TRACKED_USERS:
+                _user_locks.pop(next(iter(_user_locks)), None)
+        lock = _user_locks[user_id] = asyncio.Lock()
+    return lock
+
+
+async def _dispatch_callback(callback_url: str, user_id: str, user_message: str, lock: asyncio.Lock):
     """AI 답변 생성 → callbackUrl 로 POST → 대화 저장/알림."""
-    reply = await _safe_reply(
-        user_id,
-        user_message,
-        max_tokens=CALLBACK_MAX_TOKENS,
-        timeout_sec=CALLBACK_TIMEOUT_SEC,
-    )
-    payload = KakaoWebhookResponse.from_text(reply).model_dump()
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.post(callback_url, json=payload)
-            if r.status_code >= 400:
-                logger.error(f"콜백 POST {r.status_code} [{user_id}]: {r.text[:200]}")
-    except Exception as e:
-        logger.error(f"콜백 POST 실패 [{user_id}]: {e}")
-    await _record(user_id, user_message, reply)
+    async with lock:
+        reply = await _safe_reply(
+            user_id,
+            user_message,
+            max_tokens=CALLBACK_MAX_TOKENS,
+            timeout_sec=CALLBACK_TIMEOUT_SEC,
+        )
+        payload = KakaoWebhookResponse.from_text(reply).model_dump()
+        
+        # 콜백 전송 (네트워크 장애 대비 최대 3회 재시도 적용)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=10) as c:
+                    r = await c.post(callback_url, json=payload)
+                    if r.status_code < 400:
+                        break
+                    logger.error(
+                        f"콜백 POST 오류 {r.status_code} [{user_id}] "
+                        f"(시도 {attempt+1}/{max_retries}): {r.text[:200]}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"콜백 POST 실패 [{user_id}] "
+                    f"(시도 {attempt+1}/{max_retries}): {e}"
+                )
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1.0)
+                
+        await _record(user_id, user_message, reply)
 
 
-def _spawn_callback(callback_url: str, user_id: str, user_message: str):
-    task = asyncio.create_task(_dispatch_callback(callback_url, user_id, user_message))
+def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: asyncio.Lock):
+    task = asyncio.create_task(_dispatch_callback(callback_url, user_id, user_message, lock))
     _bg_tasks.add(task)
     task.add_done_callback(_bg_tasks.discard)
 
@@ -184,8 +216,9 @@ async def _handle_webhook(request: Request):
     logger.info(f"[{user_id}] 메시지: {user_message} / callback={'yes' if callback_url else 'no'}")
 
     # 콜백 대기 모드: 즉시 ACK, 실제 답변은 백그라운드에서 callbackUrl로 POST
-    if callback_url:
-        _spawn_callback(callback_url, user_id, user_message)
+    lock = _get_user_lock(user_id)
+    if callback_url and callback_url.startswith(("http://", "https://")):
+        _spawn_callback(callback_url, user_id, user_message, lock)
         return {
             "version": "2.0",
             "useCallback": True,
@@ -193,9 +226,10 @@ async def _handle_webhook(request: Request):
         }
 
     # 동기 모드 (오픈빌더에서 콜백 미사용 시 폴백)
-    reply = await _safe_reply(user_id, user_message)
-    _spawn_record(user_id, user_message, reply)
-    return KakaoWebhookResponse.from_text(reply)
+    async with lock:
+        reply = await _safe_reply(user_id, user_message)
+        _spawn_record(user_id, user_message, reply)
+        return KakaoWebhookResponse.from_text(reply)
 
 
 @router.post("/webhook/{secret}")

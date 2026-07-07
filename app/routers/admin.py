@@ -383,6 +383,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .memobtn { background:var(--field); border:1px solid var(--line); color:var(--sub);
              border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; padding:5px 10px; }
   .memobtn:active { color:var(--accent); }
+  .delrowbtn { background:transparent; border:none; color:var(--sub); font-size:16px;
+               cursor:pointer; padding:4px 8px; border-radius:6px; transition:color .12s, background .12s; }
+  .delrowbtn:hover { color:#ef4444; background:rgba(239,68,68,.1); }
   .memo-view { margin-top:10px; padding:10px 12px; background:var(--warn-soft);
                border:1px solid var(--warn); border-radius:10px; font-size:15px;
                color:var(--txt); white-space:pre-wrap; word-break:break-word; }
@@ -690,7 +693,12 @@ async function loadAll(){
     const cv=document.getElementById('convos');
     cv.innerHTML=convos.length?convos.map(r=>`
       <div class="item clickable" onclick="openUser('${esc(r.user_id)}')">
-        <div class="head"><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span><span class="arrow">›</span></div>
+        <div class="head">
+          <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
+          <span class="spacer"></span>
+          <button class="delrowbtn" onclick="event.stopPropagation(); delTurn(${r.id})" title="대화 삭제">🗑</button>
+          <span class="arrow">›</span>
+        </div>
         <div class="q">Q. ${esc(r.user_message)}</div>
         <div class="a">A. ${esc(r.bot_reply)}</div>
       </div>`).join(''):'<div class="empty">아직 대화 기록이 없습니다.</div>';
@@ -764,7 +772,9 @@ async function delTurn(id){
   const fd=new FormData();
   fd.append('id',id);
   await fetch('api/conversation/delete',{method:'POST',body:fd});
-  await renderUser();
+  if(currentUserId){
+    await renderUser();
+  }
   loadAll();
 }
 
@@ -780,7 +790,12 @@ function convListHTML(rows){
   if(!rows.length) return '<div class="empty">대화가 없습니다.</div>';
   return rows.map(r=>`
     <div class="item clickable" onclick="closeCard();openUser('${esc(r.user_id)}')">
-      <div class="head"><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span><span class="arrow">›</span></div>
+      <div class="head">
+        <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
+        <span class="spacer"></span>
+        <button class="delrowbtn" onclick="event.stopPropagation(); delTurn(${r.id})" title="대화 삭제">🗑</button>
+        <span class="arrow">›</span>
+      </div>
       <div class="q">Q. ${esc(r.user_message)}</div>
       <div class="a">A. ${esc(r.bot_reply)}</div>
     </div>`).join('');
