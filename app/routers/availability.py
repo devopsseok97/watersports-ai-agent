@@ -635,8 +635,13 @@ function renderList(rows){
       <div class="r-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button class="del-btn" onclick="delRes(${r.id})" title="삭제">🗑</button></div>
     </div></div>`;
   }).join('');
+  const n = new Date();
+  const todayStr = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  const pastHint = (dateEl.value < todayStr && rows.some(r=>(r.status||'예약')==='예약'))
+    ? `<div class="daysum" style="color:#b45309">지난 날짜입니다 · 안 온 손님은 🚫로 노쇼 표시해 주세요 <small>(표시 없으면 방문 완료로 집계)</small></div>` : '';
   el.innerHTML = hdr + rowsHtml
-    + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'');
+    + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'')
+    + pastHint;
 }
 
 async function addRes(){

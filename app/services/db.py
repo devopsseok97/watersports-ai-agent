@@ -25,15 +25,19 @@ async def save_conversation(
     user_message: str,
     bot_reply: str,
     is_booking_intent: bool = False,
+    response_ms: int | None = None,
 ):
     """대화 기록을 Supabase에 저장"""
     client = await get_supabase()
-    await client.table("conversations").insert({
+    row = {
         "user_id": user_id,
         "user_message": user_message,
         "bot_reply": bot_reply,
         "is_booking_intent": is_booking_intent,
-    }).execute()
+    }
+    if response_ms is not None:
+        row["response_ms"] = response_ms
+    await client.table("conversations").insert(row).execute()
 
 
 # ---------- 대시보드 조회용 ----------

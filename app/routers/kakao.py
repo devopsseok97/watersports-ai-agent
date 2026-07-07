@@ -61,8 +61,8 @@ def _rate_limited(user_id: str) -> bool:
 _bg_tasks: set[asyncio.Task] = set()
 
 
-def _spawn_record(user_id: str, user_message: str, reply: str):
-    task = asyncio.create_task(_record(user_id, user_message, reply))
+def _spawn_record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
+    task = asyncio.create_task(_record(user_id, user_message, reply, response_ms))
     _bg_tasks.add(task)
     task.add_done_callback(_bg_tasks.discard)
 
@@ -115,12 +115,14 @@ def _get_user_lock(user_id: str) -> asyncio.Lock:
 async def _dispatch_callback(callback_url: str, user_id: str, user_message: str, lock: asyncio.Lock):
     """AI 답변 생성 → callbackUrl 로 POST → 대화 저장/알림."""
     async with lock:
+        started = time.monotonic()
         reply = await _safe_reply(
             user_id,
             user_message,
             max_tokens=CALLBACK_MAX_TOKENS,
             timeout_sec=CALLBACK_TIMEOUT_SEC,
         )
+        response_ms = int((time.monotonic() - started) * 1000)
         payload = KakaoWebhookResponse.from_text(reply).model_dump()
         
         # 콜백 전송 (네트워크 장애 대비 최대 3회 재시도 적용)
@@ -143,7 +145,7 @@ async def _dispatch_callback(callback_url: str, user_id: str, user_message: str,
             if attempt < max_retries - 1:
                 await asyncio.sleep(1.0)
                 
-        await _record(user_id, user_message, reply)
+        await _record(user_id, user_message, reply, response_ms)
 
 
 def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: asyncio.Lock):
@@ -152,7 +154,7 @@ def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: as
     task.add_done_callback(_bg_tasks.discard)
 
 
-async def _record(user_id: str, user_message: str, reply: str):
+async def _record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
     is_booking_intent = any(kw in user_message for kw in BOOKING_KEYWORDS)
     is_escalation = "전화로 문의" in reply or "전화 문의" in reply
     try:
@@ -161,6 +163,7 @@ async def _record(user_id: str, user_message: str, reply: str):
             user_message=user_message,
             bot_reply=reply,
             is_booking_intent=is_booking_intent,
+            response_ms=response_ms,
         )
     except Exception as e:
         logger.warning(f"대화 저장 실패: {e}")
@@ -227,8 +230,10 @@ async def _handle_webhook(request: Request):
 
     # 동기 모드 (오픈빌더에서 콜백 미사용 시 폴백)
     async with lock:
+        started = time.monotonic()
         reply = await _safe_reply(user_id, user_message)
-        _spawn_record(user_id, user_message, reply)
+        response_ms = int((time.monotonic() - started) * 1000)
+        _spawn_record(user_id, user_message, reply, response_ms)
         return KakaoWebhookResponse.from_text(reply)
 
 

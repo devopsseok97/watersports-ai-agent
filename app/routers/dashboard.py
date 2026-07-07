@@ -84,6 +84,18 @@ async def api_analytics(_=Depends(require_admin)):
     today_s = str(today)
     ym = today_s[:7]
 
+    # 노쇼율: 지난 날짜 기준. status '예약'인 과거 건은 방문 완료로 간주(운영 컨벤션).
+    past_visited = sum(
+        1 for r in rows
+        if (r.get("status") or "예약") == "예약" and (r.get("slot_date") or "") < today_s
+    )
+    past_noshow = sum(
+        1 for r in rows
+        if (r.get("status") or "예약") == "노쇼" and (r.get("slot_date") or "") < today_s
+    )
+    past_total = past_visited + past_noshow
+    noshow_rate = round(past_noshow / past_total * 100, 1) if past_total else None
+
     total_ppl = sum(int(r.get("people") or 0) for r in confirmed)
     total_rev = sum(_amt(r.get("amount")) for r in confirmed)
     today_ppl = sum(int(r.get("people") or 0) for r in confirmed if r.get("slot_date") == today_s)
@@ -103,6 +115,8 @@ async def api_analytics(_=Depends(require_admin)):
         "stats": {
             "confirmed": len(confirmed),
             "noshow": noshow_count,
+            "noshow_rate": noshow_rate,
+            "past_total": past_total,
             "pending": pending_count,
             "total_ppl": total_ppl,
             "total_rev": total_rev,
@@ -455,7 +469,7 @@ function renderKPI() {
     <div class="kcard">
       <div class="kl">전체 누적 수입</div>
       <div class="kv" style="font-size:18px">${won(s.total_rev)}</div>
-      <div class="ks">노쇼 ${s.noshow||0}건 · 입금대기 ${s.pending||0}건</div>
+      <div class="ks">노쇼 ${s.noshow||0}건${s.noshow_rate!=null?` (${s.noshow_rate}%)`:''} · 입금대기 ${s.pending||0}건</div>
     </div>`;
 }
 
