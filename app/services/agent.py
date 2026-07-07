@@ -248,14 +248,16 @@ class AgentService:
         weather_status = get_cached_weather()
         availability_status = get_cached_availability()
 
-        # 대화 기록 초기화
+        # 대화 기록 초기화 (dict 삽입 순서 = 최근 사용 순서로 유지해 LRU 퇴출)
         if user_id not in conversation_history:
-            # 유저 수 한도 초과 시 가장 오래된 유저부터 제거
+            # 유저 수 한도 초과 시 가장 오래 안 쓴 유저부터 제거
             if len(conversation_history) >= MAX_USERS:
                 oldest_keys = list(conversation_history.keys())[:MAX_USERS // 10]
                 for k in oldest_keys:
                     del conversation_history[k]
             conversation_history[user_id] = []
+        else:
+            conversation_history[user_id] = conversation_history.pop(user_id)
 
         # 대화 기록에 사용자 메시지 추가
         conversation_history[user_id].append({"role": "user", "content": message})
@@ -299,7 +301,9 @@ class AgentService:
             logger.error(f"AI 응답 오류: {e}")
             reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
 
-        # 대화 기록에 AI 응답 추가
+        # 대화 기록에 AI 응답 추가 후 최근 N턴만 보관 (무한 증가 방지)
         conversation_history[user_id].append({"role": "assistant", "content": reply})
+        if len(conversation_history[user_id]) > MAX_HISTORY * 2:
+            conversation_history[user_id] = conversation_history[user_id][-MAX_HISTORY * 2:]
 
         return reply

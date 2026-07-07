@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     admin_password: str = ""
     ops_password: str = ""
     ops_token: str = ""
+    session_salt: str = ""  # 세션 토큰 HMAC salt (미설정 시 코드 기본값 사용)
     naver_client_id: str = ""
     naver_client_secret: str = ""
     self_url: str = "https://web-production-9282c.up.railway.app"

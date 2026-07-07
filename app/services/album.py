@@ -1,7 +1,7 @@
 """사진 앨범 메타데이터 관리 (Supabase).
 
-사진 파일 자체는 서버 로컬 폴더(photo_storage/{code}/)에 저장하고,
-앨범 정보(코드, 메모, 사진 수, 만료일)만 Supabase에 기록한다.
+사진 파일은 Supabase Storage(photos 버킷, {code}/ 경로)에 저장하고,
+앨범 정보(코드, 메모, 사진 수, 만료일)는 Supabase 테이블에 기록한다.
 """
 import secrets
 import string

@@ -2,6 +2,7 @@
 
 5분마다 최근 15분 결제완료 주문을 조회해 예약 DB에 자동 등록.
 """
+import asyncio
 import base64
 import logging
 import re
@@ -46,7 +47,9 @@ async def _get_token() -> str:
     if not cid or not csec:
         raise ValueError("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 미설정")
 
-    ts, sig = _sign(cid, csec)
+    # bcrypt는 CPU 바운드(수십~수백ms) — 이벤트루프 블로킹 방지 위해 스레드로 실행
+    # (블로킹 시 같은 프로세스의 카톡 웹훅 응답까지 지연될 수 있음)
+    ts, sig = await asyncio.to_thread(_sign, cid, csec)
     logger.info(f"[네이버] client_id={cid[:6]}... ts={ts} sig={sig[:10]}...")
     body = urllib.parse.urlencode({
         "grant_type": "client_credentials",

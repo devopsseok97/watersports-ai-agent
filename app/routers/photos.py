@@ -206,6 +206,7 @@ async def thumb_redirect(code: str, filename: str):
 
 @router.get("/qr/{code}.png")
 async def qr_png(code: str, request: Request):
+    _check_code(code)
     try:
         import qrcode
     except ImportError:

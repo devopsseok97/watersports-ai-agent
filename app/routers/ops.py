@@ -15,21 +15,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 OPS_COOKIE = "opsess"
-_SALT = b"surffirst_ops_2026"
 KST = timezone(timedelta(hours=9))
+SESSION_TTL_SEC = 90 * 24 * 3600  # remember 쿠키 수명(90일)과 동일
+
+_pw_missing_warned = False
+
+
+def _salt() -> bytes:
+    return (getattr(settings, "session_salt", "") or "surffirst_ops_2026").encode()
 
 
 def _make_token(pw: str) -> str:
-    return hmac.new(pw.encode(), _SALT, hashlib.sha256).hexdigest()
+    ts = str(int(time.time()))
+    msg = _salt() + b"|ops|" + ts.encode()
+    sig = hmac.new(pw.encode(), msg, hashlib.sha256).hexdigest()
+    return f"{ts}.{sig}"
 
 
 def _verify(token: str | None) -> bool:
+    global _pw_missing_warned
     pw = getattr(settings, "ops_password", "") or ""
     if not pw:
-        return True
-    if not token:
+        # fail-closed: 비밀번호 미설정 시 통과가 아니라 차단
+        if not _pw_missing_warned:
+            logger.error("OPS_PASSWORD 미설정 — /ops 접근을 차단합니다 (fail-closed)")
+            _pw_missing_warned = True
         return False
-    return hmac.compare_digest(token, _make_token(pw))
+    if not token or "." not in token:
+        return False
+    ts, _, sig = token.partition(".")
+    if not ts.isdigit() or time.time() - int(ts) > SESSION_TTL_SEC:
+        return False
+    msg = _salt() + b"|ops|" + ts.encode()
+    expected = hmac.new(pw.encode(), msg, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(sig, expected)
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -47,13 +66,13 @@ async def login_submit(
     remember: str = Form(default=""),
 ):
     pw = getattr(settings, "ops_password", "") or ""
-    ok = not pw or secrets.compare_digest(password, pw)
+    ok = bool(pw) and secrets.compare_digest(password, pw)
     if not ok:
         return HTMLResponse(
             _LOGIN_HTML.replace("{ERROR}", '<div class="error">비밀번호가 올바르지 않습니다.</div>'),
             status_code=401,
         )
-    token = _make_token(pw) if pw else ""
+    token = _make_token(pw)
     resp = RedirectResponse(url="/ops/", status_code=302)
     max_age = 90 * 24 * 3600 if remember == "1" else None
     resp.set_cookie(OPS_COOKIE, token, max_age=max_age, httponly=True, samesite="lax")

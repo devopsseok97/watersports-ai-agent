@@ -39,13 +39,13 @@ async def login_submit(
     remember: str = Form(default=""),
 ):
     expected = getattr(settings, "admin_password", "") or ""
-    ok = not expected or secrets.compare_digest(password, expected)
+    ok = bool(expected) and secrets.compare_digest(password, expected)
     if not ok:
         return HTMLResponse(
             LOGIN_HTML.replace("{ERROR}", '<div class="error">비밀번호가 올바르지 않습니다.</div>'),
             status_code=401,
         )
-    token = make_token(expected) if expected else ""
+    token = make_token(expected)
     response = RedirectResponse(url="/admin/", status_code=302)
     max_age = 30 * 24 * 3600 if remember == "1" else None
     response.set_cookie(SESSION_COOKIE, token, max_age=max_age, httponly=True, samesite="lax")
