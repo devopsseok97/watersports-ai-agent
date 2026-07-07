@@ -9,6 +9,7 @@ class KakaoUser(BaseModel):
 class KakaoUserRequest(BaseModel):
     utterance: str
     user: KakaoUser
+    callbackUrl: Optional[str] = None  # 오픈빌더 콜백 대기 모드에서 카톡이 전달
 
 
 class KakaoBot(BaseModel):

@@ -233,7 +233,15 @@ class AgentService:
     def __init__(self):
         self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    async def get_reply(self, user_id: str, message: str, shop_key: str = "default") -> str:
+    async def get_reply(
+        self,
+        user_id: str,
+        message: str,
+        shop_key: str = "default",
+        *,
+        max_tokens: int = 230,
+        timeout_sec: float = 4.2,
+    ) -> str:
         import asyncio
 
         # 날씨·잔여석: 백그라운드가 미리 채워둔 캐시만 즉시 읽음 (외부 호출 없음 → 지연 0)
@@ -275,12 +283,12 @@ class AgentService:
             response = await asyncio.wait_for(
                 self.client.messages.create(
                     model=MODEL,
-                    max_tokens=230,  # 180→230: 결제 링크 잘림 방지 (URL 60자+ 필요)
+                    max_tokens=max_tokens,  # 콜백 모드: 넉넉히(400+), 동기 모드: 230
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
                 ),
-                timeout=4.2,  # 카카오톡 5초 제한 - 네트워크 왕복(~0.8s) 여유분 확보
+                timeout=timeout_sec,  # 콜백 모드: 50s, 동기 모드: 4.2s
             )
             reply = response.content[0].text
 

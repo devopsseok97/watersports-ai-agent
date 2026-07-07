@@ -4,7 +4,7 @@ from app.models.kakao import KakaoWebhookRequest, KakaoWebhookResponse
 from app.services.agent import AgentService
 from app.services.db import save_conversation
 from app.services.slack import notify_inquiry
-import logging, asyncio, secrets, time
+import httpx, logging, asyncio, secrets, time
 from collections import deque
 
 logger = logging.getLogger(__name__)
@@ -67,12 +67,57 @@ def _spawn_record(user_id: str, user_message: str, reply: str):
     task.add_done_callback(_bg_tasks.discard)
 
 
-async def _safe_reply(user_id: str, user_message: str) -> str:
+async def _safe_reply(
+    user_id: str,
+    user_message: str,
+    *,
+    max_tokens: int = 230,
+    timeout_sec: float = 4.2,
+) -> str:
     try:
-        return await agent_service.get_reply(user_id=user_id, message=user_message)
+        return await agent_service.get_reply(
+            user_id=user_id,
+            message=user_message,
+            max_tokens=max_tokens,
+            timeout_sec=timeout_sec,
+        )
     except Exception as e:
         logger.error(f"AI 응답 생성 실패: {e}")
         return "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
+
+
+# ── 콜백 대기 모드 (오픈빌더에서 활성화 시 카톡이 callbackUrl 전달) ─────────
+# 첫 응답에 useCallback:true 로 즉시 ACK → 백그라운드에서 AI 호출 → 완성되면
+# callbackUrl 로 최종 답변 POST (최대 60초 안에 도착해야 카톡이 채널에 표시).
+# 이 모드에서는 5초 타임아웃 걱정 없이 정확한 답변에 집중 가능.
+
+CALLBACK_TIMEOUT_SEC = 50.0   # Anthropic 응답 최대 대기 (여유분 10초)
+CALLBACK_MAX_TOKENS = 450     # 정확도 우선 - 상세 안내에 충분한 여유
+
+
+async def _dispatch_callback(callback_url: str, user_id: str, user_message: str):
+    """AI 답변 생성 → callbackUrl 로 POST → 대화 저장/알림."""
+    reply = await _safe_reply(
+        user_id,
+        user_message,
+        max_tokens=CALLBACK_MAX_TOKENS,
+        timeout_sec=CALLBACK_TIMEOUT_SEC,
+    )
+    payload = KakaoWebhookResponse.from_text(reply).model_dump()
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.post(callback_url, json=payload)
+            if r.status_code >= 400:
+                logger.error(f"콜백 POST {r.status_code} [{user_id}]: {r.text[:200]}")
+    except Exception as e:
+        logger.error(f"콜백 POST 실패 [{user_id}]: {e}")
+    await _record(user_id, user_message, reply)
+
+
+def _spawn_callback(callback_url: str, user_id: str, user_message: str):
+    task = asyncio.create_task(_dispatch_callback(callback_url, user_id, user_message))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
 
 async def _record(user_id: str, user_message: str, reply: str):
@@ -107,10 +152,12 @@ async def kakao_webhook_check():
 async def _handle_webhook(request: Request):
     body_bytes = await request.body()
 
+    callback_url: str | None = None
     try:
         payload = KakaoWebhookRequest.model_validate_json(body_bytes)
         user_id = payload.userRequest.user.id
         user_message = payload.userRequest.utterance[:1500]
+        callback_url = payload.userRequest.callbackUrl
     except Exception as e:
         # 스키마가 달라도 응답에 필요한 건 utterance/user.id뿐 → 원본 dict에서 직접 추출
         # (원본 페이로드를 로그에 남겨 다음 형식 변경 때 즉시 진단 가능하게 한다)
@@ -121,6 +168,7 @@ async def _handle_webhook(request: Request):
             ur = raw.get("userRequest") or {}
             user_message = str(ur.get("utterance") or "")[:1500]
             user_id = str((ur.get("user") or {}).get("id") or "unknown")
+            callback_url = ur.get("callbackUrl")
             if not user_message:
                 return KakaoWebhookResponse.from_text("안녕하세요! 무엇을 도와드릴까요?")
         except Exception:
@@ -133,8 +181,18 @@ async def _handle_webhook(request: Request):
             "급하신 경우 전화 주세요 📞 010-6547-1067"
         )
 
-    logger.info(f"[{user_id}] 메시지: {user_message}")
+    logger.info(f"[{user_id}] 메시지: {user_message} / callback={'yes' if callback_url else 'no'}")
 
+    # 콜백 대기 모드: 즉시 ACK, 실제 답변은 백그라운드에서 callbackUrl로 POST
+    if callback_url:
+        _spawn_callback(callback_url, user_id, user_message)
+        return {
+            "version": "2.0",
+            "useCallback": True,
+            "data": {"text": "잠시만요, 확인 중이에요 🏄"},
+        }
+
+    # 동기 모드 (오픈빌더에서 콜백 미사용 시 폴백)
     reply = await _safe_reply(user_id, user_message)
     _spawn_record(user_id, user_message, reply)
     return KakaoWebhookResponse.from_text(reply)
