@@ -6,7 +6,7 @@ import secrets
 import time
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Cookie, Form, HTTPException, status
+from fastapi import APIRouter, Cookie, Form, Header, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.config import settings
@@ -80,9 +80,19 @@ async def api_naver_debug(
     return await debug_sync(hours=hours)
 
 
+def _verify_token_header(header_token: str | None) -> bool:
+    tok = getattr(settings, "ops_token", "") or ""
+    if not tok or not header_token:
+        return False
+    return secrets.compare_digest(header_token, tok)
+
+
 @router.get("/api/status")
-async def api_status(opsess: str | None = Cookie(default=None)):
-    if not _verify(opsess):
+async def api_status(
+    opsess: str | None = Cookie(default=None),
+    x_ops_token: str | None = Header(default=None),
+):
+    if not _verify(opsess) and not _verify_token_header(x_ops_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     now_kst = datetime.now(KST)

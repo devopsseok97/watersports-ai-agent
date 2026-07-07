@@ -1,0 +1,40 @@
+name: healthcheck
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check /health
+        id: check
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+              https://web-production-9282c.up.railway.app/health || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "healthy ($code)"
+              exit 0
+            fi
+            echo "attempt $i failed (HTTP $code), retrying in 20s..."
+            sleep 20
+          done
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Alert Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          now=$(TZ=Asia/Seoul date "+%m/%d %H:%M")
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"blocks\":[
+              {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"🚨 서퍼스트 서버 다운 감지\"}},
+              {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*시간:* ${now} KST\\n*상태:* /health 3회 연속 실패 (HTTP ${{ steps.check.outputs.code }})\\n*조치:* Railway 대시보드에서 서비스 상태를 확인하세요.\\nhttps://railway.app/dashboard\"}}
+            ]}"

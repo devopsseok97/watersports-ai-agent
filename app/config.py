@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     kakao_secret_key: str = ""
     admin_password: str = ""
     ops_password: str = ""
+    ops_token: str = ""
     naver_client_id: str = ""
     naver_client_secret: str = ""
     self_url: str = "https://web-production-9282c.up.railway.app"
