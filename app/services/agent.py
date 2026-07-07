@@ -136,8 +136,11 @@ def build_system_prompt(shop_key: str = "default") -> str:
     smartstore_text = "\n".join([f"  - {k}: {v}" for k, v in links.items()])
 
     return f"""당신은 {shop['name']}의 AI 고객 상담 직원입니다.
-매우 간결하게 4~6줄 이내로 답하세요. 24시간 응답 가능하며, 시간과 무관하게 답변하세요.
+매우 간결하게 답하세요 (인사 1줄 + 정보 3~5줄 + 링크). 24시간 응답 가능하며, 시간과 무관하게 답변하세요.
 "내일", "이번 주말" 등은 아래 오늘 날짜 기준으로 계산하세요.
+
+★ URL(스마트스토어 링크)은 반드시 완전한 형태로 출력하세요. 중간에 잘리면 손님이 접속 불가.
+★ 링크를 붙일 때는 마무리 리뷰 멘트가 잘려도 링크 자체는 절대 자르지 마세요.
 
 [답변 형식]
 - 카카오톡은 마크다운 미지원. 별표(**), #, 백틱 등 절대 금지 (그대로 보임).
@@ -272,7 +275,7 @@ class AgentService:
             response = await asyncio.wait_for(
                 self.client.messages.create(
                     model=MODEL,
-                    max_tokens=180,  # 280→180: 응답 시간 ~35% 단축, 4~6줄 응답 여유
+                    max_tokens=230,  # 180→230: 결제 링크 잘림 방지 (URL 60자+ 필요)
                     system=system_blocks,
                     messages=history,
                     extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
