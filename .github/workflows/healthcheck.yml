@@ -5,28 +5,43 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
+env:
+  BASE_URL: https://web-production-9282c.up.railway.app
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check /health
+      - name: Check /health and kakao webhook
         id: check
         run: |
-          for i in 1 2 3; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-              https://web-production-9282c.up.railway.app/health || echo "000")
-            if [ "$code" = "200" ]; then
-              echo "healthy ($code)"
-              exit 0
+          fail_target=""
+          for path in /health /kakao/webhook; do
+            for i in 1 2 3; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$BASE_URL$path" || echo "000")
+              if [ "$code" = "200" ]; then break; fi
+              echo "$path attempt $i failed (HTTP $code), retrying in 20s..."
+              sleep 20
+            done
+            if [ "$code" != "200" ]; then
+              fail_target="$path (HTTP $code)"
+              break
             fi
-            echo "attempt $i failed (HTTP $code), retrying in 20s..."
-            sleep 20
           done
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          exit 1
+          if [ -n "$fail_target" ]; then
+            echo "target=$fail_target" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
 
-      - name: Alert Slack on failure
+          # 카톡은 5초 안에 답해야 함 — 웹훅 왕복이 3초 넘으면 경고
+          t=$(curl -s -o /dev/null -w "%{time_total}" --max-time 15 "$BASE_URL/kakao/webhook" || echo "99")
+          echo "kakao webhook latency: ${t}s"
+          slow=$(awk -v t="$t" 'BEGIN{print (t>3)?"1":"0"}')
+          echo "latency=$t" >> "$GITHUB_OUTPUT"
+          echo "slow=$slow" >> "$GITHUB_OUTPUT"
+
+      - name: Alert Slack (down)
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -35,6 +50,18 @@ jobs:
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "{\"blocks\":[
-              {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"🚨 서퍼스트 서버 다운 감지\"}},
-              {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*시간:* ${now} KST\\n*상태:* /health 3회 연속 실패 (HTTP ${{ steps.check.outputs.code }})\\n*조치:* Railway 대시보드에서 서비스 상태를 확인하세요.\\nhttps://railway.app/dashboard\"}}
+              {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"🚨 서퍼스트 서버 이상 — 카톡 응대 중단 위험\"}},
+              {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*시간:* ${now} KST\\n*실패 지점:* ${{ steps.check.outputs.target }} (3회 연속 실패)\\n*영향:* 카카오톡 챗봇이 응답하지 못할 수 있습니다.\\n*조치:* Railway 대시보드에서 서비스 상태를 확인하세요.\\nhttps://railway.app/dashboard\"}}
+            ]}"
+
+      - name: Alert Slack (slow)
+        if: steps.check.outputs.slow == '1'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          now=$(TZ=Asia/Seoul date "+%m/%d %H:%M")
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"blocks\":[
+              {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"🟡 *카톡 웹훅 응답 지연* (${now} KST)\\n왕복 ${{ steps.check.outputs.latency }}초 — 5초 제한에 근접하면 고객 카톡이 타임아웃 폴백으로 빠질 수 있어요.\"}}
             ]}"
