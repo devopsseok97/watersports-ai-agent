@@ -616,11 +616,9 @@ function renderList(rows){
     if(isNo){
       acts = `<button onclick="setStatus(${r.id},'예약')" title="복원">↩️</button>`;
     } else if(isPend){
-      acts = `<button onclick="setStatus(${r.id},'예약')" title="입금확인 → 확정">✅</button>`
-           + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
+      acts = `<button onclick="setStatus(${r.id},'예약')" title="입금확인 → 확정">✅</button>`;
     } else {
-      acts = `<button onclick="setStatus(${r.id},'입금대기')" title="입금대기로 전환">⏳</button>`
-           + `<button onclick="setStatus(${r.id},'노쇼')" title="노쇼">🚫</button>`;
+      acts = `<button onclick="setStatus(${r.id},'입금대기')" title="입금대기로 전환">⏳</button>`;
     }
     const subParts = [r.program, r.people+'명', ...(amt?[amt.toLocaleString('ko-KR')+'원']:[]), ...(hasDeposit?['예약금 '+dep.toLocaleString('ko-KR')+'원']:[])];
     return `<div class="res-row ${rowCls}"><div class="res-main">
@@ -635,13 +633,8 @@ function renderList(rows){
       <div class="r-acts">${acts}<button onclick="openEdit(${r.id})" title="수정">✏️</button><button class="del-btn" onclick="delRes(${r.id})" title="삭제">🗑</button></div>
     </div></div>`;
   }).join('');
-  const n = new Date();
-  const todayStr = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
-  const pastHint = (dateEl.value < todayStr && rows.some(r=>(r.status||'예약')==='예약'))
-    ? `<div class="daysum" style="color:#b45309">지난 날짜입니다 · 안 온 손님은 🚫로 노쇼 표시해 주세요 <small>(표시 없으면 방문 완료로 집계)</small></div>` : '';
   el.innerHTML = hdr + rowsHtml
-    + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기·노쇼 제외)</small></div>`:'')
-    + pastHint;
+    + (sumAmt>0?`<div class="daysum">이 날짜 확정 수입 <b>${sumAmt.toLocaleString('ko-KR')}원</b> <small>(입금대기 제외)</small></div>`:'');
 }
 
 async function addRes(){
@@ -677,8 +670,7 @@ async function delRes(id){
 
 async function setStatus(id, status){
   let msg;
-  if(status==='노쇼') msg = '노쇼로 표시할까요?\\n자리는 다시 풀리지만 기록은 남습니다.';
-  else if(status==='입금대기') msg = '입금대기(가예약)로 전환할까요?\\n자리는 잡아두지만 입금 확인 전까지 수입엔 안 잡힙니다.';
+  if(status==='입금대기') msg = '입금대기(가예약)로 전환할까요?\\n자리는 잡아두지만 입금 확인 전까지 수입엔 안 잡힙니다.';
   else msg = '입금확인 → 예약으로 확정할까요?';
   if(!confirm(msg)) return;
   const fd = new FormData();

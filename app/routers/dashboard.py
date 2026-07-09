@@ -469,7 +469,7 @@ function renderKPI() {
     <div class="kcard">
       <div class="kl">전체 누적 수입</div>
       <div class="kv" style="font-size:18px">${won(s.total_rev)}</div>
-      <div class="ks">노쇼 ${s.noshow||0}건${s.noshow_rate!=null?` (${s.noshow_rate}%)`:''} · 입금대기 ${s.pending||0}건</div>
+      <div class="ks">입금대기 ${s.pending||0}건</div>
     </div>`;
 }
 

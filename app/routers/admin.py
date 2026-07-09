@@ -484,10 +484,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="label">입금대기</div><div class="value" id="s-pending">-</div>
       <div class="sublabel" id="s-pending-sub">눌러서 대기 보기 ›</div>
     </div>
-    <div class="stat danger clickable" onclick="openCard('noshow')">
-      <div class="label">노쇼율 (이번 달)</div><div class="value" id="s-noshow">-</div>
-      <div class="sublabel" id="s-noshow-sub">눌러서 노쇼 보기 ›</div>
-    </div>
   </div>
 
   <h2>📊 수입 분석</h2>
@@ -667,8 +663,6 @@ async function loadAll(){
     document.getElementById('s-confirmed').textContent=(resStats.total_reservations??0)+'건';
     document.getElementById('s-confirmed-sub').textContent='누적 '+(resStats.total_people??0)+'명 · 눌러서 명단 ›';
     document.getElementById('s-revenue').textContent=won(resStats.month_revenue);
-    document.getElementById('s-noshow').textContent=(resStats.month_noshow_rate??0)+'%';
-    document.getElementById('s-noshow-sub').textContent='이번 달 '+(resStats.month_noshow??0)+'건 · 누적 '+(resStats.noshow_total??0)+'건 ›';
     document.getElementById('s-pending').textContent=(resStats.pending_total??0)+'건';
     document.getElementById('s-pending-sub').textContent=(resStats.pending_people??0)+'명 · '+won(resStats.pending_amount)+' 대기 ›';
 
@@ -842,7 +836,7 @@ function openCard(type){
         <div class="b hi"><div class="k">이번 달</div><div class="v">${won(rs.month_revenue)}</div></div>
         <div class="b"><div class="k">전체 누적</div><div class="v">${won(rs.total_revenue)}</div></div>
       </div>
-      <div style="color:var(--sub);font-size:13px;margin-bottom:12px;">예약별 실수령 금액입니다(노쇼 제외). 금액 수정은 📅 예약 화면에서 합니다.</div>
+      <div style="color:var(--sub);font-size:13px;margin-bottom:12px;">예약별 실수령 금액입니다. 금액 수정은 📅 예약 화면에서 합니다.</div>
       `+(c.length?c.map(resRowHTML).join(''):'<div class="empty">확정 수입 건이 없습니다.</div>');
   } else if(type==='pending'){
     const pd=list.filter(r=>(r.status||'예약')==='입금대기');
@@ -855,17 +849,6 @@ function openCard(type){
       </div>
       <div style="color:var(--sub);font-size:13px;margin-bottom:12px;">자리는 잡아뒀지만 아직 입금 확인 전입니다. 입금 확인되면 📅 예약 화면에서 ✅를 눌러 확정하세요.</div>
       `+(pd.length?pd.map(resRowHTML).join(''):'<div class="empty">입금대기 건이 없습니다.</div>');
-  } else if(type==='noshow'){
-    const ns=list.filter(r=>(r.status||'예약')==='노쇼');
-    title.textContent='🚫 노쇼 내역';
-    body.innerHTML=`
-      <div class="revbox">
-        <div class="b"><div class="k">이번 달 노쇼율</div><div class="v">${rs.month_noshow_rate||0}%</div></div>
-        <div class="b hi"><div class="k">이번 달 노쇼</div><div class="v">${rs.month_noshow||0}건</div></div>
-        <div class="b"><div class="k">누적 노쇼</div><div class="v">${rs.noshow_total||0}건</div></div>
-      </div>
-      <div style="color:var(--sub);font-size:13px;margin-bottom:12px;">노쇼는 잔여석에서 제외되지만 기록은 남습니다. 📅 예약 화면에서 복원 가능합니다.</div>
-      `+(ns.length?ns.map(resRowHTML).join(''):'<div class="empty">노쇼 기록이 없습니다. 👍</div>');
   }
   document.getElementById('cardmodal').classList.add('show');
 }
@@ -878,7 +861,7 @@ function editMemo(id){
   if(!slot) return;
   slot.innerHTML=`
     <div class="memo-edit">
-      <textarea id="memo-${id}" rows="2" placeholder="예: 6/7 데패강 4명 전화함 / 입금대기 / 노쇼주의">${esc(cur)}</textarea>
+      <textarea id="memo-${id}" rows="2" placeholder="예: 6/7 데패강 4명 전화함 / 입금대기">${esc(cur)}</textarea>
       <div class="bar">
         <button class="cancel" onclick="loadAll()">취소</button>
         <button class="ok" onclick="saveMemo(${id})">메모 저장</button>

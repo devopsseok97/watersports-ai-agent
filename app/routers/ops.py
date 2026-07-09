@@ -391,7 +391,6 @@ function render(d) {
       <div class="row"><span class="rk">확정 예약</span><span class="rv ok">${rs.confirmed}건</span></div>
       <div class="row"><span class="rk">이번달 수입</span><span class="rv accent">${won(rs.month_revenue)}</span></div>
       <div class="row"><span class="rk">입금대기</span><span class="rv ${rs.pending>0?'warn':'ok'}">${rs.pending}건</span></div>
-      <div class="row"><span class="rk">누적 노쇼율</span><span class="rv ${rs.noshow_rate>10?'err':rs.noshow_rate>5?'warn':'ok'}">${rs.noshow_rate}%</span></div>
     </div>
 
     <div class="box">
