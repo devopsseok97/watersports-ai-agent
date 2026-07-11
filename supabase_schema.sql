@@ -95,3 +95,18 @@ CREATE POLICY "service_role_only_photo_albums"
   TO service_role
   USING (true)
   WITH CHECK (true);
+
+-- 오손 랜딩페이지 도입 문의 리드
+CREATE TABLE IF NOT EXISTS leads (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    business_name TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_only_leads" ON leads
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
