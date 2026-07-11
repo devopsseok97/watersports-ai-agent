@@ -5,10 +5,9 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import kakao, health, admin, photos, availability, dashboard, ops
+from app.routers import kakao, health, admin, photos, availability, dashboard, ops, landing
 from app.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -95,10 +94,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="WaterSports AI Agent", version="0.3.0", lifespan=lifespan)
 
 
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/admin/")
-
+app.include_router(landing.router)
 app.include_router(health.router)
 app.include_router(kakao.router, prefix="/kakao")
 app.include_router(admin.router, prefix="/admin")

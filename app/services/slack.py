@@ -72,3 +72,31 @@ async def notify_inquiry(
 async def notify_owner(user_id: str, message: str):
     """하위 호환용 — notify_inquiry로 위임."""
     await notify_inquiry(user_id, message, is_booking=True)
+
+
+async def notify_lead(name: str, phone: str, business_name: str, message: str = ""):
+    """랜딩페이지 도입 문의 리드를 슬랙으로 알림."""
+    now = datetime.now(KST).strftime("%m/%d %H:%M")
+    payload = {
+        "blocks": [
+            {"type": "header",
+             "text": {"type": "plain_text", "text": "🎉 오손 도입 문의 접수!"}},
+            {"type": "section", "fields": [
+                {"type": "mrkdwn", "text": f"*시간:*\n{now}"},
+                {"type": "mrkdwn", "text": f"*사업장:*\n{business_name}"},
+                {"type": "mrkdwn", "text": f"*이름:*\n{name}"},
+                {"type": "mrkdwn", "text": f"*연락처:*\n{phone}"},
+            ]},
+            *(
+                [{"type": "section",
+                  "text": {"type": "mrkdwn", "text": f"*문의 내용:*\n>{message}"}}]
+                if message else []
+            ),
+        ]
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(settings.slack_webhook_url, json=payload)
+            response.raise_for_status()
+    except Exception as e:
+        logger.warning(f"리드 슬랙 알림 전송 실패: {e}")

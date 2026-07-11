@@ -144,3 +144,15 @@ async def get_stats() -> dict:
         "booking_intents": intents.count or 0,
         "today_conversations": today.count or 0,
     }
+
+# ---------- 랜딩페이지 리드 ----------
+
+async def save_lead(name: str, phone: str, business_name: str, message: str = ""):
+    """도입 문의 리드를 Supabase에 저장"""
+    client = await get_supabase()
+    await client.table("leads").insert({
+        "name": name,
+        "phone": phone,
+        "business_name": business_name,
+        "message": message,
+    }).execute()
