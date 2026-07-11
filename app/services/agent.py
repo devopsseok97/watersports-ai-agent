@@ -40,6 +40,30 @@ async def refresh_availability_cache() -> None:
 
 _warm_client: "anthropic.AsyncAnthropic | None" = None
 
+# 워밍은 4분마다 돌므로 연속 실패는 API 접근 불가(크레딧 소진·키 만료 등)의
+# 조기 신호다 — 2026-07-11 크레딧 소진을 손님이 처음 발견한 사고 재발 방지.
+_WARM_ALERT_THRESHOLD = 2          # 연속 2회(약 8분) 실패 시 경고
+_WARM_REALERT_SEC = 6 * 3600       # 장애 지속 시 6시간마다 재경고
+_warm_fail_count = 0
+_warm_alerted_at = 0.0
+
+
+async def _warm_failure_alert(error: Exception) -> None:
+    global _warm_alerted_at
+    now = time.monotonic()
+    if _warm_fail_count == _WARM_ALERT_THRESHOLD or (
+        _warm_fail_count > _WARM_ALERT_THRESHOLD
+        and now - _warm_alerted_at > _WARM_REALERT_SEC
+    ):
+        _warm_alerted_at = now
+        from app.services.slack import notify_system_alert
+        await notify_system_alert(
+            "🔴 *카톡 AI 응답 불가 — Anthropic API 호출 연속 실패*\n"
+            f"캐시 워밍 {_warm_fail_count}회 연속 실패. 지금 손님 문의가 오면 오류 폴백이 나갑니다.\n"
+            f"오류: {str(error)[:300]}\n"
+            "크레딧 소진이면 console.anthropic.com → Plans & Billing에서 충전하세요."
+        )
+
 
 async def warm_anthropic_cache() -> None:
     """Anthropic 프롬프트 캐시(TTL 5분) 워밍.
@@ -49,7 +73,7 @@ async def warm_anthropic_cache() -> None:
     초소형 요청으로 캐시를 데워두면 첫 메시지도 항상 캐시 히트 → 즉시 응답.
     get_reply와 동일한 정적 system 블록·모델을 써야 같은 캐시를 공유한다.
     """
-    global _warm_client
+    global _warm_client, _warm_fail_count, _warm_alerted_at
     try:
         if _warm_client is None:
             _warm_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -66,8 +90,17 @@ async def warm_anthropic_cache() -> None:
             messages=[{"role": "user", "content": "."}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
+        if _warm_fail_count >= _WARM_ALERT_THRESHOLD:
+            from app.services.slack import notify_system_alert
+            await notify_system_alert(
+                "🟢 *카톡 AI 응답 복구* — Anthropic API 호출이 다시 성공했습니다."
+            )
+        _warm_fail_count = 0
+        _warm_alerted_at = 0.0
     except Exception as e:
-        logger.warning(f"프롬프트 캐시 워밍 실패: {e}")
+        _warm_fail_count += 1
+        logger.warning(f"프롬프트 캐시 워밍 실패({_warm_fail_count}연속): {e}")
+        await _warm_failure_alert(e)
 
 
 # ── 읽기 전용 getter (요청 경로에서 사용, 외부 호출 없음) ──────────────────────

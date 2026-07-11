@@ -74,6 +74,16 @@ async def notify_owner(user_id: str, message: str):
     await notify_inquiry(user_id, message, is_booking=True)
 
 
+async def notify_system_alert(text: str):
+    """시스템 장애/복구 경고를 슬랙으로 전송 (실패해도 예외 전파 안 함)."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(settings.slack_webhook_url, json={"text": text})
+            response.raise_for_status()
+    except Exception as e:
+        logger.warning(f"슬랙 시스템 경고 전송 실패: {e}")
+
+
 async def notify_lead(name: str, phone: str, business_name: str, message: str = ""):
     """랜딩페이지 도입 문의 리드를 슬랙으로 알림."""
     now = datetime.now(KST).strftime("%m/%d %H:%M")
