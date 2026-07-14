@@ -1,11 +1,32 @@
 import time
 import logging
+from datetime import datetime, timedelta, timezone
+
 import anthropic
 from app.config import settings
 from app.services.weather import get_operation_status
 from app.services.availability import build_availability_text, today_str
 
 logger = logging.getLogger(__name__)
+
+KST = timezone(timedelta(hours=9))
+_WEEKDAY_KO = ["월", "화", "수", "목", "금", "토", "일"]
+
+
+def build_calendar_text(days: int = 21) -> str:
+    """앞으로 N일 날짜→요일 달력 (휴무 표기 포함).
+
+    LLM은 날짜에서 요일을 직접 계산하면 자주 틀린다 (7/17(금)을 (목)이라고
+    우기며 손님과 언쟁한 사고). 서버가 정확히 계산해 프롬프트에 넣어주고
+    모델은 읽기만 하게 한다.
+    """
+    now = datetime.now(KST)
+    parts = []
+    for i in range(days):
+        d = now + timedelta(days=i)
+        wd = _WEEKDAY_KO[d.weekday()]
+        parts.append(f"{d.month}/{d.day}({wd}{'·휴무' if d.weekday() == 1 else ''})")
+    return " ".join(parts)
 
 MODEL = "claude-haiku-4-5-20251001"  # 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
 
@@ -170,7 +191,7 @@ def build_system_prompt(shop_key: str = "default") -> str:
 
     return f"""당신은 {shop['name']}의 AI 고객 상담 직원입니다.
 매우 간결하게 답하세요 (인사 1줄 + 정보 3~5줄 + 링크). 24시간 응답 가능하며, 시간과 무관하게 답변하세요.
-"내일", "이번 주말" 등은 아래 오늘 날짜 기준으로 계산하세요.
+"내일", "이번 주말" 등 상대 표현은 아래 오늘 날짜와 [날짜-요일 달력] 기준으로 해석하세요.
 
 ★ URL(스마트스토어 링크)은 반드시 완전한 형태로 출력하세요. 중간에 잘리면 손님이 접속 불가.
 ★ 링크를 붙일 때는 마무리 리뷰 멘트가 잘려도 링크 자체는 절대 자르지 마세요.
@@ -180,12 +201,12 @@ def build_system_prompt(shop_key: str = "default") -> str:
 - 강조는 이모지 라벨 + 줄바꿈. 항목은 한 줄에 하나 (📍 장소 / ⏰ 시간 / 💰 비용 / 👕 준비물).
 - 문단 사이 빈 줄. 인사·마무리는 짧고 친근하게, 이모지 가볍게.
 
-[답변 예시 - 형식 참고]
+[답변 예시 - 형식만 참고. 날짜 옆 요일은 반드시 [날짜-요일 달력]에서 그대로 읽어 채우세요]
 안녕하세요! 서퍼스트입니다 🏄
 
-7월 6일(일) 선셋카약 38자리 남음 / 선셋패들보드 예약 가능
-7월 7일(월) 전 종목 예약 가능
-7월 8일(화) 휴무 😥
+7월 N일(달력의 요일) 선셋카약 38자리 남음 / 선셋패들보드 예약 가능
+7월 N일(달력의 요일) 전 종목 예약 가능
+7월 N일(화) 휴무 😥 ← 달력에 '휴무'로 표시된 날짜만
 
 💰 선셋카약·패들보드 18:30 / 1인 3만원~5만원
 
@@ -227,8 +248,11 @@ https://smartstore.naver.com/fourseason_1/products/8356965224
 ★ "선셋"만 언급 → 종목 묻지 말고 패들보드/카약 두 링크 모두 제공.
 ★ 날짜 여러 개 문의 → 손님이 직접 고르니 링크만 제공.
 
-[휴무일]
-화요일 휴무. 오늘 날짜 기준으로 요일을 정확히 계산 (추측 금지).
+[휴무일과 요일 - 매우 중요]
+화요일 휴무. 요일을 절대 직접 계산·추측하지 마세요.
+날짜의 요일은 반드시 아래 dynamic 블록의 [날짜-요일 달력]에서 그대로 읽어 쓰세요.
+손님이 말한 요일이 달력과 다르면 달력이 정답입니다. 달력 기준으로 부드럽게 안내하세요.
+달력에 없는 먼 날짜는 요일을 언급하지 말고 날짜만 말하세요.
 
 [카약 특이사항]
 2인 1카약 기준, 요금은 인당 3만원. 예약은 인당 1개.
@@ -299,8 +323,11 @@ class AgentService:
         history = conversation_history[user_id][-MAX_HISTORY * 2:]
 
         # 시스템 프롬프트: 정적 블록(캐시) + 동적 블록(날짜·날씨·잔여석)
+        now_kst = datetime.now(KST)
         dynamic_part = (
-            f"오늘 날짜: {today_str()} (KST)\n\n"
+            f"오늘 날짜: {today_str()} ({_WEEKDAY_KO[now_kst.weekday()]}요일, KST)\n\n"
+            f"[날짜-요일 달력 (오늘부터 3주) - 요일은 반드시 여기서 그대로 읽을 것, 직접 계산 금지]\n"
+            f"{build_calendar_text()}\n\n"
             f"[오늘 날씨/운영 상태]\n{weather_status or '운영 중입니다.'}\n\n"
             f"[예약 가능 현황 (마감된 타임만 표시)]\n"
             f"{availability_status or '실시간 현황은 전화로 확인해 주세요.'}"
