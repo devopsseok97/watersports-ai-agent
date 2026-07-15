@@ -285,9 +285,46 @@ https://smartstore.naver.com/fourseason_1/products/8356965224
 """
 
 
+# LLM 분류 실패 시 폴백용 (과거 단독 판정 방식 — 표현 변형을 놓쳐 LLM 분류로 대체됨)
+BOOKING_KEYWORDS = ["예약", "신청", "하고 싶어", "가능한가요", "얼마예요", "결제"]
+
+_INTENT_PROMPT = (
+    "손님 메시지가 예약 의향(예약·구매·일정/잔여석 확인·가격 문의 등 예약으로 "
+    "이어질 수 있는 의도)을 담고 있으면 Y, 아니면(단순 인사·감사·잡담) N.\n"
+    "Y 또는 N 한 글자만 출력하세요."
+)
+
+
 class AgentService:
     def __init__(self):
         self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+
+    async def classify_booking_intent(self, message: str) -> bool:
+        """예약 의향 분류. 백그라운드 전용 — 카톡 응답 경로에서 호출 금지.
+
+        실패하거나 출력이 Y/N이 아니면 키워드 매칭으로 폴백.
+        """
+        import asyncio
+
+        try:
+            response = await asyncio.wait_for(
+                self.client.messages.create(
+                    model=MODEL,
+                    max_tokens=2,
+                    system=_INTENT_PROMPT,
+                    messages=[{"role": "user", "content": message[:500]}],
+                ),
+                timeout=10.0,
+            )
+            verdict = response.content[0].text.strip().upper()
+            if verdict.startswith("Y"):
+                return True
+            if verdict.startswith("N"):
+                return False
+            logger.warning(f"의도 분류 출력 이상('{verdict}') — 키워드 폴백")
+        except Exception as e:
+            logger.warning(f"의도 분류 실패({e}) — 키워드 폴백")
+        return any(kw in message for kw in BOOKING_KEYWORDS)
 
     async def get_reply(
         self,

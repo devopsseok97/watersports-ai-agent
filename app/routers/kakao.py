@@ -11,8 +11,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 agent_service = AgentService()
 
-BOOKING_KEYWORDS = ["예약", "신청", "하고 싶어", "가능한가요", "얼마예요", "결제"]
-
 # ── 웹훅 보안 (2026-07-04 검수 조치) ─────────────────────────────────────────
 # 1) 비밀 경로: /kakao/webhook/{secret} — KAKAO_SECRET_KEY 와 일치해야 처리.
 #    카카오 오픈빌더는 커스텀 헤더 서명을 지원하지 않으므로 URL 자체를 비밀로 유지.
@@ -155,7 +153,8 @@ def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: as
 
 
 async def _record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
-    is_booking_intent = any(kw in user_message for kw in BOOKING_KEYWORDS)
+    # 백그라운드 태스크라 LLM 분류를 써도 카톡 5초 타임아웃과 무관
+    is_booking_intent = await agent_service.classify_booking_intent(user_message)
     is_escalation = "전화로 문의" in reply or "전화 문의" in reply
     try:
         await save_conversation(
