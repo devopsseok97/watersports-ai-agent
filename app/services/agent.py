@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import anthropic
 from app.config import settings
+from app.services.alerts import FailureAlarm
 from app.services.weather import get_operation_status
 from app.services.availability import build_availability_text, today_str
 
@@ -41,13 +42,27 @@ _AVAIL_TTL   = 60    # 1분 (참고용)
 
 # ── 백그라운드 갱신 (main.py lifespan 루프에서 호출) ──────────────────────────
 
+# 30분 주기 → 3회 = 1.5시간 안에 감지
+_weather_alarm = FailureAlarm(
+    "날씨 갱신(KMA API)", threshold=3,
+    hint="챗봇이 낡은 날씨 정보로 안내 중입니다. KMA_API_KEY 유효기간을 확인하세요.",
+)
+# 1분 주기 → 3회 = 3분 안에 감지
+_avail_alarm = FailureAlarm(
+    "잔여석 캐시 갱신(Supabase)", threshold=3,
+    hint="챗봇이 낡은 잔여석 정보로 답하는 중입니다. Supabase 상태를 확인하세요.",
+)
+
+
 async def refresh_weather_cache() -> None:
     """날씨/운영상태 캐시 갱신. 실패해도 직전 값 유지."""
     try:
         val = await get_operation_status()
         _cache["weather"] = (time.monotonic(), val)
+        await _weather_alarm.ok()
     except Exception as e:
         logger.warning(f"날씨 캐시 갱신 실패(직전 값 유지): {e}")
+        await _weather_alarm.fail(e)
 
 
 async def refresh_availability_cache() -> None:
@@ -55,35 +70,21 @@ async def refresh_availability_cache() -> None:
     try:
         val = await build_availability_text()
         _cache["avail"] = (time.monotonic(), val)
+        await _avail_alarm.ok()
     except Exception as e:
         logger.warning(f"잔여석 캐시 갱신 실패(직전 값 유지): {e}")
+        await _avail_alarm.fail(e)
 
 
 _warm_client: "anthropic.AsyncAnthropic | None" = None
 
-# 워밍은 4분마다 돌므로 연속 실패는 API 접근 불가(크레딧 소진·키 만료 등)의
-# 조기 신호다 — 2026-07-11 크레딧 소진을 손님이 처음 발견한 사고 재발 방지.
-_WARM_ALERT_THRESHOLD = 2          # 연속 2회(약 8분) 실패 시 경고
-_WARM_REALERT_SEC = 6 * 3600       # 장애 지속 시 6시간마다 재경고
-_warm_fail_count = 0
-_warm_alerted_at = 0.0
-
-
-async def _warm_failure_alert(error: Exception) -> None:
-    global _warm_alerted_at
-    now = time.monotonic()
-    if _warm_fail_count == _WARM_ALERT_THRESHOLD or (
-        _warm_fail_count > _WARM_ALERT_THRESHOLD
-        and now - _warm_alerted_at > _WARM_REALERT_SEC
-    ):
-        _warm_alerted_at = now
-        from app.services.slack import notify_system_alert
-        await notify_system_alert(
-            "🔴 *카톡 AI 응답 불가 — Anthropic API 호출 연속 실패*\n"
-            f"캐시 워밍 {_warm_fail_count}회 연속 실패. 지금 손님 문의가 오면 오류 폴백이 나갑니다.\n"
-            f"오류: {str(error)[:300]}\n"
-            "크레딧 소진이면 console.anthropic.com → Plans & Billing에서 충전하세요."
-        )
+# 워밍은 4분 주기 → 2회 = 약 8분 안에 감지. 연속 실패는 API 접근 불가
+# (크레딧 소진·키 만료·모델 오류)의 조기 신호다.
+_warm_alarm = FailureAlarm(
+    "카톡 AI 응답(Anthropic API)", threshold=2,
+    hint="지금 손님 문의가 오면 오류 폴백이 나갑니다. "
+         "크레딧 소진이면 console.anthropic.com → Plans & Billing에서 충전하세요.",
+)
 
 
 async def warm_anthropic_cache() -> None:
@@ -94,7 +95,7 @@ async def warm_anthropic_cache() -> None:
     초소형 요청으로 캐시를 데워두면 첫 메시지도 항상 캐시 히트 → 즉시 응답.
     get_reply와 동일한 정적 system 블록·모델을 써야 같은 캐시를 공유한다.
     """
-    global _warm_client, _warm_fail_count, _warm_alerted_at
+    global _warm_client
     try:
         if _warm_client is None:
             _warm_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -111,17 +112,10 @@ async def warm_anthropic_cache() -> None:
             messages=[{"role": "user", "content": "."}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
-        if _warm_fail_count >= _WARM_ALERT_THRESHOLD:
-            from app.services.slack import notify_system_alert
-            await notify_system_alert(
-                "🟢 *카톡 AI 응답 복구* — Anthropic API 호출이 다시 성공했습니다."
-            )
-        _warm_fail_count = 0
-        _warm_alerted_at = 0.0
+        await _warm_alarm.ok()
     except Exception as e:
-        _warm_fail_count += 1
-        logger.warning(f"프롬프트 캐시 워밍 실패({_warm_fail_count}연속): {e}")
-        await _warm_failure_alert(e)
+        logger.warning(f"프롬프트 캐시 워밍 실패({_warm_alarm.fail_count + 1}연속): {e}")
+        await _warm_alarm.fail(e)
 
 
 # ── 읽기 전용 getter (요청 경로에서 사용, 외부 호출 없음) ──────────────────────

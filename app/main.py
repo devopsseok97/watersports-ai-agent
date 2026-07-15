@@ -32,14 +32,22 @@ async def lifespan(app: FastAPI):
 
     async def _naver_sync_loop():
         from app.services.naver import sync_naver_orders
+        from app.services.alerts import FailureAlarm
+        # 1분 주기 → 5회 = 5분 안에 감지
+        alarm = FailureAlarm(
+            "네이버 주문 동기화", threshold=5,
+            hint="스마트스토어 입금 자동 확인이 멈췄습니다. 커머스 API 토큰 만료 여부를 확인하세요.",
+        )
         await asyncio.sleep(10)  # 서버 기동 후 10초 대기
         while True:
             try:
                 n = await sync_naver_orders()
                 if n:
                     _log.info(f"네이버 주문 자동 등록: {n}건")
+                await alarm.ok()
             except Exception as e:
                 _log.error(f"네이버 동기화 오류: {e}")
+                await alarm.fail(e)
             await asyncio.sleep(60)  # 1분마다
 
     async def _cache_refresh_loop():
