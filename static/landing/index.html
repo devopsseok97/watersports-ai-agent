@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>오손 OSON — 사장님 대신 손님을 받는 AI</title>
-<meta name="description" content="카카오톡 AI 응대·예약·노쇼 방지를 한 번에. 수상레저 사업장을 위한 운영 시스템 오손.">
+<meta name="description" content="카카오톡 AI 응대·예약·노쇼 방지를 한 번에. 성수기가 있는 모든 레저 사업장을 위한 운영 시스템 오손.">
 <style>
   :root{
     --navy:#0b2a4a;--blue:#1e9de3;--aqua:#2fb6e8;
@@ -61,6 +61,24 @@
   input:focus,textarea:focus{outline:none;border-color:var(--blue)}
   .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
   #form-done{text-align:center;font-size:17px;color:var(--navy);font-weight:700;padding:40px 0}
+  .demo{max-width:340px;margin:0 auto 32px;background:#fff;border-radius:20px;
+        box-shadow:0 14px 36px rgba(11,42,74,.16);overflow:hidden;text-align:left}
+  .demo-top{background:var(--navy);color:#dceffa;font-size:12.5px;font-weight:700;
+            padding:10px 16px;display:flex;align-items:center;gap:8px}
+  .demo-dot{width:8px;height:8px;border-radius:50%;background:#41d97c;flex-shrink:0;
+            box-shadow:0 0 0 3px rgba(65,217,124,.25);animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(65,217,124,.08)}}
+  .demo-chat{padding:16px 14px;min-height:186px;display:flex;flex-direction:column;
+             justify-content:flex-start;gap:9px}
+  .msg{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;
+       opacity:0;transform:translateY(8px);animation:pop .35s forwards}
+  .msg.guest{align-self:flex-start;background:#eef2f6;color:#33475b;border-top-left-radius:4px}
+  .msg.oson{align-self:flex-end;background:var(--blue);color:#fff;border-top-right-radius:4px}
+  .msg.typing{align-self:flex-end;background:var(--blue);color:#fff;letter-spacing:3px;font-weight:800}
+  .msg .tag{display:block;font-size:11px;opacity:.85;margin-top:6px}
+  @keyframes pop{to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.msg{animation:none;opacity:1;transform:none}
+    .demo-dot{animation:none}}
   footer{padding:36px 0 44px;text-align:center;font-size:13px;color:var(--muted2)}
 </style>
 </head>
@@ -72,7 +90,11 @@
 
 <div class="hero"><div class="wrap">
   <h1>오! 손님 —<br>사장님 대신 <em>손님을 받는 AI</em></h1>
-  <p>카카오톡 문의 응대부터 예약·노쇼 방지까지,<br>강습 중에도 오손이 사장님 대신 일합니다.</p>
+  <p>카카오톡 문의 응대부터 예약·노쇼 방지까지,<br>여름 윈드서핑장부터 겨울 스키장까지 오손이 대신 일합니다.</p>
+  <div class="demo">
+    <div class="demo-top"><span class="demo-dot"></span>오손이 응대 중 · <span id="demo-season">☀️ 여름 성수기</span></div>
+    <div class="demo-chat" id="demo-chat"></div>
+  </div>
   <a class="cta" href="#contact">도입 문의하기</a>
 </div></div>
 
@@ -82,25 +104,25 @@
   <div class="cards">
     <div class="card"><div class="emoji">📱</div><h3>성수기 카톡 폭주</h3><p>강습 끝나고 보면 문의 수십 개. 답이 늦어 손님을 놓칩니다.</p></div>
     <div class="card"><div class="emoji">🕳️</div><h3>예약해놓고 노쇼</h3><p>자리는 비고 매출은 사라지고, 확인 전화는 번거롭습니다.</p></div>
-    <div class="card"><div class="emoji">🏄</div><h3>강습 중 응대 불가</h3><p>물 위에 있는 동안엔 전화도 카톡도 받을 수 없습니다.</p></div>
+    <div class="card"><div class="emoji">🏄</div><h3>현장에선 응대 불가</h3><p>물 위에서도 슬로프 위에서도, 강습 중엔 전화도 카톡도 못 받습니다.</p></div>
   </div>
 </div></section>
 
 <section style="padding-top:0"><div class="wrap">
   <h2>오손이 대신합니다</h2>
-  <p class="sub">수상레저 사업장에 맞춘 운영 시스템</p>
+  <p class="sub">성수기가 있는 레저 사업장에 맞춘 운영 시스템</p>
   <div class="cards">
     <div class="card"><div class="emoji">💬</div><h3>카톡 AI 즉답</h3><p>가격·시간·위치 등 반복 문의에 몇 초 안에 자동 응답합니다.</p></div>
     <div class="card"><div class="emoji">📅</div><h3>예약·잔여석 관리</h3><p>실시간 잔여석 안내와 예약 접수를 대화로 처리합니다.</p></div>
     <div class="card"><div class="emoji">✅</div><h3>노쇼 방지</h3><p>입금 확인과 리마인드로 빈자리 손실을 줄입니다.</p></div>
-    <div class="card"><div class="emoji">🌤️</div><h3>날씨 안내</h3><p>바람·수온 등 그날의 컨디션을 손님에게 자동 안내합니다.</p></div>
+    <div class="card"><div class="emoji">🌤️</div><h3>날씨 안내</h3><p>바람·수온·적설 등 그날의 컨디션을 손님에게 자동 안내합니다.</p></div>
     <div class="card"><div class="emoji">📸</div><h3>사진앨범</h3><p>강습 사진을 앨범 링크로 손님에게 바로 전달합니다.</p></div>
   </div>
 </div></section>
 
 <section class="case"><div class="wrap">
   <h2>이미 현장에서 일하고 있습니다</h2>
-  <p class="sub">서울 광나루 수상레저 현장 검증 중</p>
+  <p class="sub">첫 도입 현장 — 서울 광나루</p>
   <div class="case-card">
     <div class="badge">도입 사례</div>
     <blockquote>광나루 서울윈드서핑장 <b>서퍼스트</b>에서 성수기 카카오톡 응대와 예약 관리를 오손이 담당하고 있습니다.</blockquote>
@@ -116,7 +138,7 @@
     <div class="field"><label for="f-phone">연락처</label>
       <input id="f-phone" name="phone" type="tel" required minlength="5" maxlength="30" placeholder="010-0000-0000"></div>
     <div class="field"><label for="f-biz">사업장명</label>
-      <input id="f-biz" name="business_name" required maxlength="100" placeholder="○○ 수상레저"></div>
+      <input id="f-biz" name="business_name" required maxlength="100" placeholder="○○ 레저 / ○○ 스키장"></div>
     <div class="field"><label for="f-msg">문의 내용 (선택)</label>
       <textarea id="f-msg" name="message" rows="4" maxlength="2000" placeholder="궁금한 점을 편하게 남겨주세요"></textarea></div>
     <div class="hp"><label>웹사이트<input name="website" tabindex="-1" autocomplete="off"></label></div>
@@ -125,9 +147,54 @@
   <p id="form-done" hidden>접수됐습니다! 하루 안에 연락드릴게요 🙌</p>
 </div></section>
 
-<footer><div class="wrap">오손 OSON — 수상레저 사업장을 위한 AI 운영 시스템</div></footer>
+<footer><div class="wrap">오손 OSON — 예약받는 사장님을 위한 AI 운영 시스템</div></footer>
 
 <script>
+const SCENES = [
+  {season: '☀️ 여름 성수기',
+   guest: '내일 오후에 윈드서핑 강습 자리 있나요?',
+   oson: '네! 내일 14시 초급 강습 3자리 남아있어요 🏄 바로 예약 도와드릴까요?'},
+  {season: '⛷️ 겨울 성수기',
+   guest: '이번 주말에 아이 2명 스키 강습 예약 돼요?',
+   oson: '네! 토요일 10시 어린이 강습 2자리 가능해요 ⛷️ 바로 예약 도와드릴까요?'},
+];
+const chat = document.getElementById('demo-chat');
+const seasonEl = document.getElementById('demo-season');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function bubble(cls, text, tag) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  if (tag) {
+    const t = document.createElement('span');
+    t.className = 'tag';
+    t.textContent = tag;
+    d.appendChild(t);
+  }
+  chat.appendChild(d);
+  return d;
+}
+
+async function playDemo() {
+  let i = 0;
+  while (true) {
+    const s = SCENES[i % SCENES.length];
+    seasonEl.textContent = s.season;
+    chat.innerHTML = '';
+    await wait(600);
+    bubble('guest', s.guest);
+    await wait(1100);
+    const typing = bubble('typing', '···');
+    await wait(1300);
+    typing.remove();
+    bubble('oson', s.oson, '⚡ 2.6초 만에 자동 응답 — 사장님은 강습 중');
+    await wait(4200);
+    i++;
+  }
+}
+playDemo();
+
 document.getElementById('lead-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target;
