@@ -170,6 +170,27 @@ SHOP_CONFIG = {
     }
 }
 
+_PRICE_KEYWORDS = ("가격", "요금", "얼마", "비용", "금액", "price", "cost", "how much")
+
+
+def _static_fallback(message: str, shop_key: str = "default") -> str | None:
+    """AI 호출이 재시도까지 실패했을 때 단골 질문은 서버가 직접 답한다.
+
+    2026-07-16 "가격구성이 어떻게 되어있나용?" 문의가 Anthropic 일시 오류로
+    오류 폴백을 받은 사고 재발 방지. AI 없이도 가격표는 정확히 안내 가능.
+    """
+    shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
+    m = message.lower()
+    if any(k in m for k in _PRICE_KEYWORDS):
+        prices = "\n".join(f"💰 {k}: {v}" for k, v in shop["prices"].items())
+        return (
+            "안녕하세요! 서퍼스트 요금 안내드릴게요 🏄\n\n"
+            f"{prices}\n\n"
+            f"예약은 네이버 스마트스토어 또는 전화({shop['contact']})로 가능합니다 😊"
+        )
+    return None
+
+
 # 사용자별 대화 기록 (메모리, 나중에 Redis로 이전 가능)
 conversation_history: dict[str, list[dict]] = {}
 MAX_HISTORY = 10   # 유저당 최근 N턴 유지
@@ -377,25 +398,43 @@ class AgentService:
             {"type": "text", "text": dynamic_part},
         ]
 
-        try:
-            response = await asyncio.wait_for(
-                self.client.messages.create(
-                    model=MODEL,
-                    max_tokens=max_tokens,  # 콜백 모드: 넉넉히(400+), 동기 모드: 230
-                    system=system_blocks,
-                    messages=history,
-                    extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
-                ),
-                timeout=timeout_sec,  # 콜백 모드: 50s, 동기 모드: 4.2s
-            )
-            reply = response.content[0].text
+        # API가 즉시 예외를 던지는 일시 오류(수백 ms)는 남은 시간 안에서 1회 더 시도.
+        # 타임아웃은 시간이 소진된 것이므로 재시도하지 않는다.
+        deadline = time.monotonic() + timeout_sec
+        reply = None
+        timed_out = False
+        for attempt in (1, 2):
+            remaining = deadline - time.monotonic()
+            if remaining < 0.5:
+                break
+            try:
+                response = await asyncio.wait_for(
+                    self.client.messages.create(
+                        model=MODEL,
+                        max_tokens=max_tokens,  # 콜백 모드: 넉넉히(400+), 동기 모드: 230
+                        system=system_blocks,
+                        messages=history,
+                        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+                    ),
+                    timeout=remaining,  # 콜백 모드: 50s, 동기 모드: 4.2s (재시도 시 잔여분)
+                )
+                reply = response.content[0].text
+                break
+            except asyncio.TimeoutError:
+                logger.warning(f"AI 응답 타임아웃 [{user_id}]")
+                timed_out = True
+                break
+            except Exception as e:
+                logger.error(f"AI 응답 오류(시도 {attempt}): {e}")
 
-        except asyncio.TimeoutError:
-            logger.warning(f"AI 응답 타임아웃 [{user_id}]")
-            reply = "죄송해요, 응답이 잠깐 지연됐어요!\n전화로 문의해 주시면 바로 안내해 드릴게요 📞 010-6547-1067"
-        except Exception as e:
-            logger.error(f"AI 응답 오류: {e}")
-            reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
+        if reply is None:
+            # 재시도까지 실패 → 단골 질문(가격 등)은 서버가 직접 답변
+            reply = _static_fallback(message, shop_key)
+        if reply is None:
+            if timed_out:
+                reply = "죄송해요, 응답이 잠깐 지연됐어요!\n전화로 문의해 주시면 바로 안내해 드릴게요 📞 010-6547-1067"
+            else:
+                reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
 
         # 대화 기록에 AI 응답 추가 후 최근 N턴만 보관 (무한 증가 방지)
         conversation_history[user_id].append({"role": "assistant", "content": reply})
