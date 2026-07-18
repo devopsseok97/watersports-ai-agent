@@ -3,143 +3,228 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>오손 OSON — 사장님 대신 손님을 받는 AI</title>
-<meta name="description" content="카카오톡 AI 응대·예약·노쇼 방지를 한 번에. 사장님 대신 일하는 AI 예약관리 웹, 오손.">
+<title>오손 OSON — 카톡 AI 예약직원</title>
+<meta name="description" content="카카오톡 문의 응대, 예약 접수, 노쇼 방지까지 — 사장님 대신 일하는 카톡 AI 예약직원, 오손.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
+  @font-face{font-family:'GmarketSans';font-weight:700;font-display:swap;
+    src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff')}
+  @font-face{font-family:'GmarketSans';font-weight:500;font-display:swap;
+    src:url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff')}
   :root{
-    --navy:#0b2a4a;--blue:#1e9de3;--aqua:#2fb6e8;
-    --bg:#eef6fb;--card:#ffffff;--chip:#dceffa;
-    --text:#1e3a52;--muted2:#5b7289;
+    --night:#14181f;--night2:#1c222b;
+    --ink:#1a1c20;--muted:#68707c;
+    --paper:#f6f7f9;--card:#ffffff;--line:#e6e8ec;
+    --yellow:#ffd83d;--yellow-soft:#fff3c4;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{font-family:'Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif;
-       color:var(--text);line-height:1.65;background:var(--bg)}
+  body{font-family:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;
+       color:var(--ink);line-height:1.65;background:var(--paper)}
+  .disp{font-family:'GmarketSans','Pretendard Variable',sans-serif;font-weight:700}
   .wrap{max-width:960px;margin:0 auto;padding:0 20px}
-  header{padding:16px 0;position:sticky;top:0;background:rgba(238,246,251,.92);
-         backdrop-filter:blur(8px);z-index:10}
+  a:focus-visible,button:focus-visible,summary:focus-visible{
+    outline:3px solid var(--yellow);outline-offset:3px;border-radius:6px}
+
+  header{padding:14px 0;position:sticky;top:0;z-index:10;
+         background:rgba(20,24,31,.92);backdrop-filter:blur(8px)}
   header .wrap{display:flex;justify-content:space-between;align-items:center}
-  .logo{font-size:21px;font-weight:800;color:var(--navy)}
-  .logo span{color:var(--blue)}
-  .nav-cta{font-size:14px;font-weight:700;color:#fff;background:var(--blue);
+  .logo{font-size:19px;color:#fff;letter-spacing:.02em}
+  .logo span{color:var(--yellow)}
+  .nav-cta{font-size:14px;font-weight:700;color:var(--ink);background:var(--yellow);
            padding:9px 20px;border-radius:999px;text-decoration:none}
-  .hero{padding:64px 0 72px;text-align:center;
-        background:linear-gradient(180deg,#eef6fb 0%,#d8edfa 60%,#c6e5f8 100%)}
-  .hero h1{font-size:clamp(30px,7vw,48px);line-height:1.25;color:var(--navy);
-           font-weight:800;margin-bottom:18px;letter-spacing:-.02em}
-  .hero h1 em{font-style:normal;color:var(--blue)}
-  .hero p{font-size:clamp(15px,3.8vw,18px);color:var(--muted2);margin-bottom:34px}
-  .cta{display:inline-block;background:var(--blue);color:#fff;font-weight:700;
+
+  .hero{background:linear-gradient(180deg,var(--night) 0%,var(--night2) 100%);
+        color:#fff;text-align:center;padding:60px 0 72px;overflow:hidden}
+  .eyebrow{display:inline-block;font-size:13px;font-weight:600;color:var(--yellow);
+           border:1px solid rgba(255,216,61,.4);border-radius:999px;
+           padding:6px 16px;margin-bottom:22px;letter-spacing:.02em}
+  .hero h1{font-size:clamp(30px,7.4vw,50px);line-height:1.3;letter-spacing:-.01em;margin-bottom:16px}
+  .hero h1 em{font-style:normal;color:var(--yellow)}
+  .hero .lede{font-size:clamp(15px,3.8vw,18px);color:#aeb6c2;margin-bottom:36px}
+  .hero .lede b{color:#e8ecf1}
+
+  .cta{display:inline-block;background:var(--yellow);color:var(--ink);font-weight:800;
        font-size:17px;padding:15px 42px;border-radius:999px;text-decoration:none;
-       border:none;cursor:pointer;box-shadow:0 8px 20px rgba(30,157,227,.35);
+       border:none;cursor:pointer;box-shadow:0 10px 26px rgba(255,216,61,.28);
        transition:transform .15s}
   .cta:active{transform:scale(.97)}
-  section{padding:60px 0}
-  h2{font-size:clamp(22px,5.5vw,30px);color:var(--navy);text-align:center;
-     font-weight:800;margin-bottom:10px;letter-spacing:-.01em}
-  .sub{font-size:15px;color:var(--muted2);text-align:center;margin-bottom:34px}
-  .cards{display:grid;grid-template-columns:1fr;gap:14px}
-  @media(min-width:640px){.cards{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}}
-  .card{background:var(--card);border-radius:20px;padding:26px 22px;
-        box-shadow:0 4px 16px rgba(11,42,74,.06)}
-  .card .emoji{display:inline-flex;align-items:center;justify-content:center;
-               width:52px;height:52px;font-size:26px;background:var(--chip);
-               border-radius:16px;margin-bottom:14px}
-  .card h3{font-size:17px;color:var(--navy);font-weight:700;margin-bottom:6px}
-  .card p{font-size:14px;color:var(--muted2)}
-  .case{background:linear-gradient(180deg,#d8edfa,#eef6fb)}
-  .case-card{background:var(--card);border-radius:20px;padding:30px 24px;
-             max-width:600px;margin:0 auto;text-align:center;
-             box-shadow:0 4px 16px rgba(11,42,74,.06)}
-  .case-card .badge{display:inline-block;font-size:12px;font-weight:700;color:var(--blue);
-                    background:var(--chip);padding:5px 14px;border-radius:999px;margin-bottom:14px}
-  .case-card blockquote{font-size:16px;color:var(--text)}
-  form{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-  .field label{display:block;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px}
-  input,textarea{width:100%;padding:13px 16px;border:1.5px solid #cfe4f2;
-                 border-radius:14px;font-size:16px;background:#fff;color:var(--text)}
-  input:focus,textarea:focus{outline:none;border-color:var(--blue)}
-  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
-  #form-done{text-align:center;font-size:17px;color:var(--navy);font-weight:700;padding:40px 0}
-  .demo{max-width:340px;margin:0 auto 32px;background:#fff;border-radius:20px;
-        box-shadow:0 14px 36px rgba(11,42,74,.16);overflow:hidden;text-align:left}
-  .demo-top{background:var(--navy);color:#dceffa;font-size:12.5px;font-weight:700;
+
+  .demo{max-width:340px;margin:0 auto 34px;background:#fff;border-radius:22px;
+        overflow:hidden;text-align:left;color:var(--ink);
+        box-shadow:0 0 0 1px rgba(255,255,255,.08),0 24px 60px rgba(0,0,0,.5),
+                   0 0 90px rgba(255,216,61,.14)}
+  .demo-top{background:#0f1319;color:#c6cdd8;font-size:12.5px;font-weight:700;
             padding:10px 16px;display:flex;align-items:center;gap:8px}
   .demo-dot{width:8px;height:8px;border-radius:50%;background:#41d97c;flex-shrink:0;
             box-shadow:0 0 0 3px rgba(65,217,124,.25);animation:pulse 1.6s infinite}
   @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(65,217,124,.08)}}
-  .demo-chat{padding:16px 14px;min-height:186px;display:flex;flex-direction:column;
-             justify-content:flex-start;gap:9px}
-  .msg{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;
+  .demo-chat{padding:16px 14px;min-height:190px;display:flex;flex-direction:column;gap:9px}
+  .msg{max-width:86%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;
        opacity:0;transform:translateY(8px);animation:pop .35s forwards}
-  .msg.guest{align-self:flex-start;background:#eef2f6;color:#33475b;border-top-left-radius:4px}
-  .msg.oson{align-self:flex-end;background:var(--blue);color:#fff;border-top-right-radius:4px}
-  .msg.typing{align-self:flex-end;background:var(--blue);color:#fff;letter-spacing:3px;font-weight:800}
-  .msg .tag{display:block;font-size:11px;opacity:.85;margin-top:6px}
+  .msg.guest{align-self:flex-start;background:#f1f3f5;color:#33404e;border-top-left-radius:4px}
+  .msg.oson{align-self:flex-end;background:var(--yellow);color:var(--ink);border-top-right-radius:4px}
+  .msg.typing{align-self:flex-end;background:var(--yellow);color:var(--ink);
+              letter-spacing:3px;font-weight:800}
+  .msg .tag{display:block;font-size:11px;color:#7a6a1e;margin-top:6px}
   @keyframes pop{to{opacity:1;transform:none}}
   @media(prefers-reduced-motion:reduce){.msg{animation:none;opacity:1;transform:none}
     .demo-dot{animation:none}}
-  footer{padding:36px 0 44px;text-align:center;font-size:13px;color:var(--muted2)}
+
+  section{padding:60px 0}
+  h2{font-size:clamp(22px,5.5vw,30px);text-align:center;margin-bottom:10px;letter-spacing:-.01em}
+  .sub{font-size:15px;color:var(--muted);text-align:center;margin-bottom:34px}
+  .cards{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:640px){.cards{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}}
+  .card{background:var(--card);border-radius:18px;padding:26px 22px;border:1px solid var(--line)}
+  .card .icon{display:inline-flex;align-items:center;justify-content:center;
+              width:48px;height:48px;background:var(--yellow-soft);
+              border-radius:14px;margin-bottom:14px}
+  .card .icon svg{width:24px;height:24px;stroke:var(--ink);fill:none;
+                  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-size:17px;font-weight:700;margin-bottom:6px}
+  .card p{font-size:14px;color:var(--muted)}
+
+  .case{background:var(--night);color:#fff}
+  .case h2{color:#fff}
+  .case .sub{color:#aeb6c2}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+         max-width:640px;margin:0 auto 26px}
+  .stat{background:var(--night2);border:1px solid rgba(255,255,255,.08);
+        border-radius:16px;padding:20px 8px;text-align:center}
+  .stat .num{font-size:clamp(22px,5vw,30px);color:var(--yellow);letter-spacing:-.01em}
+  .stat .lbl{font-size:12.5px;color:#aeb6c2;margin-top:4px}
+  .case-quote{max-width:600px;margin:0 auto 30px;text-align:center;
+              font-size:16px;color:#dfe4ea}
+  .case-quote b{color:var(--yellow)}
+  .case .note{font-size:12px;color:#7b8494;text-align:center;margin:14px 0 0}
+  .case-cta{text-align:center}
+
+  .faq{max-width:640px;margin:0 auto}
+  details{background:var(--card);border:1px solid var(--line);border-radius:16px;
+          padding:0 20px;margin-bottom:12px}
+  summary{cursor:pointer;font-weight:700;font-size:15.5px;padding:18px 0;
+          list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:'+';font-size:20px;color:var(--muted);flex-shrink:0}
+  details[open] summary::after{content:'−'}
+  details .a{font-size:14.5px;color:var(--muted);padding:0 0 18px}
+
+  .assure{display:block;text-align:center;font-size:13px;font-weight:700;color:#8a7414;
+          background:var(--yellow-soft);border-radius:999px;padding:8px 18px;
+          width:fit-content;margin:0 auto 26px}
+  form{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .field label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+  .field label small{font-weight:500;color:var(--muted)}
+  input,textarea{width:100%;padding:13px 16px;border:1.5px solid var(--line);
+                 border-radius:14px;font-size:16px;background:#fff;color:var(--ink);
+                 font-family:inherit}
+  input:focus,textarea:focus{outline:none;border-color:var(--yellow);
+                             box-shadow:0 0 0 3px rgba(255,216,61,.25)}
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+  #form-done{text-align:center;font-size:17px;font-weight:700;padding:40px 0}
+
+  footer{background:var(--night);padding:36px 0 44px;text-align:center;
+         font-size:13px;color:#7b8494}
 </style>
 </head>
 <body>
 <header><div class="wrap">
-  <div class="logo">오손 <span>OSON</span></div>
+  <div class="logo disp">오손 <span>OSON</span></div>
   <a class="nav-cta" href="#contact">도입 문의</a>
 </div></header>
 
 <div class="hero"><div class="wrap">
-  <h1>오! 손님 —<br>사장님 대신 <em>손님을 받는 AI</em></h1>
-  <p>카카오톡 문의 응대부터 예약·노쇼 방지까지,<br>사장님 대신 일하는 <b>AI 예약관리 웹</b>입니다.</p>
+  <span class="eyebrow">사장님 대신 일하는 카톡 AI 예약직원</span>
+  <h1 class="disp">새벽 2시에도<br><em>오! 손님</em>을 받습니다</h1>
+  <p class="lede">카카오톡 문의 응대부터 예약 접수·노쇼 방지까지,<br><b>오손</b>이 사장님 대신 일합니다.</p>
   <div class="demo">
-    <div class="demo-top"><span class="demo-dot"></span>오손이 응대 중 · <span id="demo-season">☀️ 여름 성수기</span></div>
+    <div class="demo-top"><span class="demo-dot"></span>오손이 응대 중 · <span id="demo-season">☀️ 여름 성수기 · 낮 2시</span></div>
     <div class="demo-chat" id="demo-chat"></div>
   </div>
   <a class="cta" href="#contact">도입 문의하기</a>
 </div></div>
 
 <section><div class="wrap">
-  <h2>사장님, 이런 적 있으시죠?</h2>
-  <p class="sub">성수기마다 반복되는 그 상황들</p>
+  <h2 class="disp">사장님, 이런 적 있으시죠?</h2>
+  <p class="sub">바쁠수록 반복되는 그 상황들</p>
   <div class="cards">
-    <div class="card"><div class="emoji">📱</div><h3>성수기 카톡 폭주</h3><p>강습 끝나고 보면 문의 수십 개. 답이 늦어 손님을 놓칩니다.</p></div>
-    <div class="card"><div class="emoji">🕳️</div><h3>예약해놓고 노쇼</h3><p>자리는 비고 매출은 사라지고, 확인 전화는 번거롭습니다.</p></div>
-    <div class="card"><div class="emoji">🏄</div><h3>현장에선 응대 불가</h3><p>물 위에서도 슬로프 위에서도, 강습 중엔 전화도 카톡도 못 받습니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/><path d="M8.5 12h.01M12.5 12h.01M16.5 12h.01"/></svg></div>
+      <h3>문의 폭주</h3><p>바쁜 시간 지나고 카톡을 열면 문의가 수십 개. 답이 늦으면 손님은 다른 곳으로 갑니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M10 14l4 4M14 14l-4 4"/></svg></div>
+      <h3>예약해놓고 노쇼</h3><p>자리는 비고 매출은 사라지고, 확인 전화는 번거롭습니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M8 3h3l2 5-2.5 1.5a11 11 0 0 0 4 4L16 11l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 6 5a2 2 0 0 1 2-2z"/><path d="M4 20 20 4"/></svg></div>
+      <h3>일하는 중엔 응대 불가</h3><p>손님 앞에 있는 동안엔 전화도 카톡도 받을 수 없습니다.</p></div>
   </div>
 </div></section>
 
 <section style="padding-top:0"><div class="wrap">
-  <h2>오손이 대신합니다</h2>
-  <p class="sub">AI 응대와 예약관리를 하나의 웹에서</p>
+  <h2 class="disp">오손이 대신합니다</h2>
+  <p class="sub">AI 응대와 예약관리를 하나로</p>
   <div class="cards">
-    <div class="card"><div class="emoji">💬</div><h3>카톡 AI 즉답</h3><p>가격·시간·위치 등 반복 문의에 몇 초 안에 자동 응답합니다.</p></div>
-    <div class="card"><div class="emoji">📅</div><h3>예약·잔여석 관리</h3><p>실시간 잔여석 안내와 예약 접수를 대화로 처리합니다.</p></div>
-    <div class="card"><div class="emoji">✅</div><h3>노쇼 방지</h3><p>입금 확인과 리마인드로 빈자리 손실을 줄입니다.</p></div>
-    <div class="card"><div class="emoji">🌤️</div><h3>날씨 안내</h3><p>바람·수온·적설 등 그날의 컨디션을 손님에게 자동 안내합니다.</p></div>
-    <div class="card"><div class="emoji">📸</div><h3>사진앨범</h3><p>강습 사진을 앨범 링크로 손님에게 바로 전달합니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></div>
+      <h3>카톡 AI 즉답</h3><p>가격·시간·위치 같은 반복 문의에 평균 2초 안에 자동 응답합니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4"/></svg></div>
+      <h3>예약·잔여석 관리</h3><p>실시간 잔여석 확인과 예약 접수를 대화로 처리합니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></div>
+      <h3>노쇼 방지</h3><p>입금 확인과 예약 리마인드로 빈자리 손실을 줄입니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg></div>
+      <h3>운영 안내</h3><p>날씨·휴무·준비물 등 그날의 안내를 손님에게 자동으로 전합니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7l1.5-3h3L15 7"/><circle cx="12" cy="13" r="3.5"/></svg></div>
+      <h3>사진앨범</h3><p>현장 사진을 앨범 링크로 손님에게 바로 전달합니다.</p></div>
+    <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="M19 3v4M17 5h4"/></svg></div>
+      <h3>사장님 호출</h3><p>AI가 답하기 애매한 문의는 사장님께 바로 넘기고 알려드립니다.</p></div>
   </div>
 </div></section>
 
 <section class="case"><div class="wrap">
-  <h2>이미 현장에서 일하고 있습니다</h2>
-  <p class="sub">첫 도입 현장 — 서울 광나루</p>
-  <div class="case-card">
-    <div class="badge">도입 사례</div>
-    <blockquote>광나루 서울윈드서핑장 <b>서퍼스트</b>에서 성수기 카카오톡 응대와 예약 관리를 오손이 담당하고 있습니다.</blockquote>
+  <h2 class="disp">이미 현장에서 일하고 있습니다</h2>
+  <p class="sub">첫 도입 — 서울 광나루 서퍼스트</p>
+  <div class="stats">
+    <div class="stat"><div class="num disp">206건</div><div class="lbl">예약 관리</div></div>
+    <div class="stat"><div class="num disp">2.0초</div><div class="lbl">평균 응답</div></div>
+    <div class="stat"><div class="num disp">24시간</div><div class="lbl">연중 응대</div></div>
+  </div>
+  <p class="case-quote">광나루 서울윈드서핑장 <b>서퍼스트</b>의 성수기 카카오톡 응대와 예약 관리를 오손이 맡고 있습니다.</p>
+  <div class="case-cta"><a class="cta" href="#contact">우리 가게도 되는지 물어보기</a></div>
+  <p class="note">숫자는 실제 운영 데이터 기준입니다.</p>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="disp">자주 묻는 질문</h2>
+  <p class="sub">사장님들이 가장 많이 물어보시는 것들</p>
+  <div class="faq">
+    <details>
+      <summary>네이버 예약이 이미 있는데요?</summary>
+      <p class="a">네이버 예약은 손님이 스스로 찾아 들어와 눌러야 하는 접수창구입니다. 오손은 "내일 자리 있어요?"라고 카톡으로 <b>묻는 손님</b>까지 받아내는 응대 직원이에요. 문의에서 예약으로 넘어가는 사이에 새는 손님을 잡아드립니다. 네이버 예약과 같이 쓰셔도 됩니다.</p>
+    </details>
+    <details>
+      <summary>카톡 채널 자동응답이랑 뭐가 다른가요?</summary>
+      <p class="a">버튼·키워드식 자동응답이 아닙니다. 손님의 문장을 이해하고, 잔여석을 실시간으로 확인해서, 예약 접수까지 대화로 끝냅니다. 답하기 애매한 질문은 사장님께 바로 넘기고 알려드려요.</p>
+    </details>
+    <details>
+      <summary>우리 업종에서도 쓸 수 있나요?</summary>
+      <p class="a">예약을 받는 곳이라면 업종과 무관하게 쓸 수 있습니다. 도입할 때 사장님 업장의 가격·시간·자주 오는 질문에 맞춰 오손을 셋업해 드립니다.</p>
+    </details>
+    <details>
+      <summary>가격은 어떻게 되나요?</summary>
+      <p class="a">업장 규모와 상황에 맞춰 문의 주시면 하루 안에 안내드립니다. 약정은 없습니다.</p>
+    </details>
   </div>
 </div></section>
 
-<section id="contact"><div class="wrap">
-  <h2>도입 문의</h2>
-  <p class="sub">하루 안에 연락드립니다 · 가격은 문의 시 안내</p>
+<section id="contact" style="padding-top:0"><div class="wrap">
+  <h2 class="disp">도입 문의</h2>
+  <p class="sub">궁금한 것만 물어보셔도 됩니다</p>
+  <span class="assure">약정 없음 · 하루 안에 연락드립니다</span>
   <form id="lead-form">
     <div class="field"><label for="f-name">이름</label>
       <input id="f-name" name="name" required maxlength="50" placeholder="홍길동"></div>
     <div class="field"><label for="f-phone">연락처</label>
       <input id="f-phone" name="phone" type="tel" required minlength="5" maxlength="30" placeholder="010-0000-0000"></div>
-    <div class="field"><label for="f-biz">사업장명</label>
-      <input id="f-biz" name="business_name" required maxlength="100" placeholder="○○ 레저 / ○○ 스키장"></div>
-    <div class="field"><label for="f-msg">문의 내용 (선택)</label>
+    <div class="field"><label for="f-biz">사업장명 <small>(선택)</small></label>
+      <input id="f-biz" name="business_name" maxlength="100" placeholder="상호를 알려주시면 준비해서 연락드려요"></div>
+    <div class="field"><label for="f-msg">문의 내용 <small>(선택)</small></label>
       <textarea id="f-msg" name="message" rows="4" maxlength="2000" placeholder="궁금한 점을 편하게 남겨주세요"></textarea></div>
     <div class="hp"><label>웹사이트<input name="website" tabindex="-1" autocomplete="off"></label></div>
     <button class="cta" type="submit">문의 보내기</button>
@@ -147,16 +232,22 @@
   <p id="form-done" hidden>접수됐습니다! 하루 안에 연락드릴게요 🙌</p>
 </div></section>
 
-<footer><div class="wrap">오손 OSON — 사장님 대신 일하는 AI 예약관리 웹</div></footer>
+<footer><div class="wrap">오손 OSON — 사장님 대신 일하는 카톡 AI 예약직원</div></footer>
 
 <script>
 const SCENES = [
-  {season: '☀️ 여름 성수기',
+  {season: '☀️ 여름 성수기 · 낮 2시',
    guest: '내일 오후에 윈드서핑 강습 자리 있나요?',
-   oson: '네! 내일 14시 초급 강습 3자리 남아있어요 🏄 바로 예약 도와드릴까요?'},
-  {season: '⛷️ 겨울 성수기',
+   oson: '네! 내일 14시 초급 강습 3자리 남아있어요 🏄 바로 예약 도와드릴까요?',
+   tag: '⚡ 2.0초 자동 응답 — 사장님은 강습 중'},
+  {season: '🌙 새벽 2:04',
+   guest: '이번 주 토요일에 2명 예약 될까요? 너무 늦게 봤네요 😅',
+   oson: '늦지 않으셨어요! 토요일 오후 3시에 2자리 있습니다 🌙 예약 도와드릴까요?',
+   tag: '⚡ 2.0초 자동 응답 — 사장님은 주무시는 중'},
+  {season: '⛷️ 겨울 성수기 · 아침 10시',
    guest: '이번 주말에 아이 2명 스키 강습 예약 돼요?',
-   oson: '네! 토요일 10시 어린이 강습 2자리 가능해요 ⛷️ 바로 예약 도와드릴까요?'},
+   oson: '네! 토요일 10시 어린이 강습 2자리 가능해요 ⛷️ 바로 예약 도와드릴까요?',
+   tag: '⚡ 2.0초 자동 응답 — 사장님은 강습 중'},
 ];
 const chat = document.getElementById('demo-chat');
 const seasonEl = document.getElementById('demo-season');
@@ -188,7 +279,7 @@ async function playDemo() {
     const typing = bubble('typing', '···');
     await wait(1300);
     typing.remove();
-    bubble('oson', s.oson, '⚡ 2.6초 만에 자동 응답 — 사장님은 강습 중');
+    bubble('oson', s.oson, s.tag);
     await wait(4200);
     i++;
   }

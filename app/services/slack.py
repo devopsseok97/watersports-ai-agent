@@ -93,7 +93,7 @@ async def notify_lead(name: str, phone: str, business_name: str, message: str = 
              "text": {"type": "plain_text", "text": "🎉 오손 도입 문의 접수!"}},
             {"type": "section", "fields": [
                 {"type": "mrkdwn", "text": f"*시간:*\n{now}"},
-                {"type": "mrkdwn", "text": f"*사업장:*\n{business_name}"},
+                {"type": "mrkdwn", "text": f"*사업장:*\n{business_name or '(미입력)'}"},
                 {"type": "mrkdwn", "text": f"*이름:*\n{name}"},
                 {"type": "mrkdwn", "text": f"*연락처:*\n{phone}"},
             ]},

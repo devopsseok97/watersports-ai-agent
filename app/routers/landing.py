@@ -21,7 +21,7 @@ _submissions: dict[str, deque] = defaultdict(deque)
 class LeadIn(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     phone: str = Field(min_length=5, max_length=30)
-    business_name: str = Field(min_length=1, max_length=100)
+    business_name: str = Field(default="", max_length=100)
     message: str = Field(default="", max_length=2000)
     website: str = ""  # honeypot — 사람 눈에 안 보이는 필드, 채워져 있으면 봇
 
