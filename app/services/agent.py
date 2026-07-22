@@ -29,7 +29,10 @@ def build_calendar_text(days: int = 21) -> str:
         parts.append(f"{d.month}/{d.day}({wd}{'·휴무' if d.weekday() == 1 else ''})")
     return " ".join(parts)
 
-MODEL = "claude-haiku-4-5-20251001"  # 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
+MODEL = "claude-haiku-4-5-20251001"  # 주 모델: 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
+# 폴백 모델: 주 모델이 일시 오류(529 오버로드 등)를 뱉을 때만 사용. 별도 용량 풀이라
+# 같은 순간 오버로드를 피할 확률이 높다. Haiku보다 느리지만 폴백 경로는 드물다.
+FALLBACK_MODEL = "claude-sonnet-5"
 
 # 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
 # ── 중요: 외부 API(KMA/Supabase) 호출은 백그라운드 루프(main.py)에서만 수행한다.
@@ -409,19 +412,24 @@ class AgentService:
             {"type": "text", "text": dynamic_part},
         ]
 
-        # API가 즉시 예외를 던지는 일시 오류(수백 ms)는 남은 시간 안에서 1회 더 시도.
+        # API가 즉시 예외를 던지는 일시 오류(수백 ms, 주로 529 오버로드)는 남은 시간
+        # 안에서 1회 더 시도한다. 이때 (1) 짧게 backoff 해 같은 오버로드 순간을 피하고
+        # (2) 폴백 모델(Sonnet 5, 별도 용량 풀)로 바꿔 재시도한다.
         # 타임아웃은 시간이 소진된 것이므로 재시도하지 않는다.
         deadline = time.monotonic() + timeout_sec
         reply = None
         timed_out = False
-        for attempt in (1, 2):
+        attempts = [(MODEL, 0.0), (FALLBACK_MODEL, 0.35)]  # (모델, 재시도 전 대기)
+        for attempt, (model, backoff) in enumerate(attempts, start=1):
+            if backoff:
+                await asyncio.sleep(backoff)
             remaining = deadline - time.monotonic()
             if remaining < 0.5:
                 break
             try:
                 response = await asyncio.wait_for(
                     self.client.messages.create(
-                        model=MODEL,
+                        model=model,
                         max_tokens=max_tokens,  # 콜백 모드: 넉넉히(400+), 동기 모드: 230
                         system=system_blocks,
                         messages=history,
@@ -432,11 +440,11 @@ class AgentService:
                 reply = response.content[0].text
                 break
             except asyncio.TimeoutError:
-                logger.warning(f"AI 응답 타임아웃 [{user_id}]")
+                logger.warning(f"AI 응답 타임아웃 [{user_id}] (모델 {model})")
                 timed_out = True
                 break
             except Exception as e:
-                logger.error(f"AI 응답 오류(시도 {attempt}): {e}")
+                logger.error(f"AI 응답 오류(시도 {attempt}, 모델 {model}): {e}")
 
         if reply is None:
             # 재시도까지 실패 → 단골 질문(가격 등)은 서버가 직접 답변
