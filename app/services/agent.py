@@ -412,14 +412,24 @@ class AgentService:
             {"type": "text", "text": dynamic_part},
         ]
 
-        # API가 즉시 예외를 던지는 일시 오류(수백 ms, 주로 529 오버로드)는 남은 시간
-        # 안에서 1회 더 시도한다. 이때 (1) 짧게 backoff 해 같은 오버로드 순간을 피하고
-        # (2) 폴백 모델(Sonnet 5, 별도 용량 풀)로 바꿔 재시도한다.
+        # API가 즉시 예외를 던지는 일시 오류(수백 ms, 주로 529 오버로드)에 대응해
+        # deadline 안에서 여러 번 재시도한다. 매 재시도는 (1) 점점 길어지는 backoff로
+        # 같은 오버로드 순간을 피하고 (2) 주 모델 ↔ 폴백 모델(Sonnet 5, 별도 용량 풀)을
+        # 번갈아 써 모델 풀 단위 오버로드를 우회한다.
+        # 재시도 개수는 남은 시간이 결정한다:
+        #   - 동기 모드(4.2s): 자연히 앞 1~2개만 실행 → 지연 없음
+        #   - 콜백 모드(50s): 전체 실행 → 일시 오버로드 버스트를 거의 흡수
         # 타임아웃은 시간이 소진된 것이므로 재시도하지 않는다.
         deadline = time.monotonic() + timeout_sec
         reply = None
         timed_out = False
-        attempts = [(MODEL, 0.0), (FALLBACK_MODEL, 0.35)]  # (모델, 재시도 전 대기)
+        attempts = [
+            (MODEL, 0.0),            # 1) 주 모델 즉시
+            (FALLBACK_MODEL, 0.35),  # 2) 폴백 모델 — 동기 모드는 보통 여기까지
+            (MODEL, 1.0),            # 3) 주 모델 재시도 (blip이 걷혔을 가능성)
+            (FALLBACK_MODEL, 2.0),   # 4) 폴백 모델 재시도
+            (MODEL, 3.0),            # 5) 콜백 모드의 넉넉한 예산 활용
+        ]
         for attempt, (model, backoff) in enumerate(attempts, start=1):
             if backoff:
                 await asyncio.sleep(backoff)
