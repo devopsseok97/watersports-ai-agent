@@ -175,13 +175,18 @@ SHOP_CONFIG = {
 
 _PRICE_KEYWORDS = ("가격", "요금", "얼마", "비용", "금액", "price", "cost", "how much")
 _PHOTO_KEYWORDS = ("사진", "포토", "photo", "picture", "이미지")
+_BOOKING_QUERY_KEYWORDS = (
+    "예약 가능", "예약이 가능", "예약되나요", "예약 되나요",
+    "예약하고 싶", "예약 하고 싶", "신청하고 싶", "신청 하고 싶",
+    "예약 문의", "예약문의",
+)
 
 
 def _static_fallback(message: str, shop_key: str = "default") -> str | None:
     """AI 호출이 재시도까지 실패했을 때 단골 질문은 서버가 직접 답한다.
 
-    2026-07-16 가격 문의·2026-07-19 사진 수령 문의가 Anthropic 일시 오류로
-    오류 폴백을 받은 사고 재발 방지. AI 없이도 이 답변들은 정확히 안내 가능.
+    2026-07-16 가격 문의·2026-07-19 사진 수령 문의·2026-07-23 예약 문의가
+    Anthropic 일시 오류로 오류 폴백을 받은 사고 재발 방지.
     """
     shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
     m = message.lower()
@@ -196,6 +201,19 @@ def _static_fallback(message: str, shop_key: str = "default") -> str | None:
         return (
             f"사진은 사장님께서 직접 챙겨드리고 있어요 📸\n"
             f"사장님께 연락 주시면 바로 안내받으실 수 있습니다 📞 {shop['contact']}"
+        )
+    if any(k in message for k in _BOOKING_QUERY_KEYWORDS):
+        avail = get_cached_availability()
+        avail_note = f"\n[현재 마감 현황]\n{avail}\n" if avail else ""
+        links = shop.get("smartstore_links", {})
+        paddle_link = links.get("패들보드/카약", "")
+        wind_link = links.get("윈드서핑", "")
+        return (
+            f"안녕하세요! 서퍼스트입니다 🏄{avail_note}\n"
+            f"예약은 아래 링크로 바로 가능해요!\n\n"
+            f"패들보드/카약 👉 {paddle_link}\n"
+            f"윈드서핑 👉 {wind_link}\n\n"
+            f"E포일·펌핑포일 예약은 전화 주세요 📞 {shop['contact']}"
         )
     return None
 
