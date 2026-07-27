@@ -191,12 +191,24 @@ def _static_fallback(message: str, shop_key: str = "default") -> str | None:
     shop = SHOP_CONFIG.get(shop_key, SHOP_CONFIG["default"])
     m = message.lower()
     if any(k in m for k in _PRICE_KEYWORDS):
-        prices = "\n".join(f"💰 {k}: {v}" for k, v in shop["prices"].items())
-        return (
-            "안녕하세요! 서퍼스트 요금 안내드릴게요 🏄\n\n"
-            f"{prices}\n\n"
-            f"예약은 네이버 스마트스토어 또는 전화({shop['contact']})로 가능합니다 😊"
-        )
+        # 물어본 종목만 골라 짧게 답한다. 종목 언급이 없을 때만 전체 안내.
+        prog_map = {
+            "패들보드": "패들보드", "패들": "패들보드",
+            "카약": "카약",
+            "윈드": "윈드서핑",
+            "전동": "전동e포일",
+            "펌핑": "펌핑포일",
+            "e포일": "E포일", "이포일": "E포일", "포일": "E포일",
+        }
+        wanted = {v for k, v in prog_map.items() if k in m}
+        # "전동" 매칭 시 "포일"의 E포일 오매칭 제거
+        if "전동" in m:
+            wanted.discard("E포일")
+        items = {k: v for k, v in shop["prices"].items()
+                 if not wanted or any(w in k for w in wanted)}
+        # 종목명에서 괄호 설명 제거해 한 줄로 간결하게
+        lines = "\n".join(f"💰 {k.split(' (')[0]}: {v}" for k, v in items.items())
+        return f"{lines}\n\n예약: 네이버 스마트스토어 또는 전화 {shop['contact']} 😊"
     if any(k in m for k in _PHOTO_KEYWORDS):
         return (
             f"사진은 사장님께서 직접 챙겨드리고 있어요 📸\n"
