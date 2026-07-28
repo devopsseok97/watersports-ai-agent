@@ -180,6 +180,7 @@ _BOOKING_QUERY_KEYWORDS = (
     "예약하고 싶", "예약 하고 싶", "신청하고 싶", "신청 하고 싶",
     "예약 문의", "예약문의",
 )
+_CANCEL_KEYWORDS = ("취소", "환불", "refund", "cancel")
 
 
 def _static_fallback(message: str, shop_key: str = "default") -> str | None:
@@ -221,6 +222,11 @@ def _static_fallback(message: str, shop_key: str = "default") -> str | None:
             "네, 예약 가능합니다! 🏄\n"
             f"아래 링크에서 바로 예약하세요 👉 {paddle_link}\n"
             f"(윈드서핑·E포일·펌핑포일은 전화 문의 📞 {shop['contact']})"
+        )
+    if any(k in message.lower() for k in _CANCEL_KEYWORDS):
+        return (
+            f"취소는 가능하지만 환불은 어려운 점 양해 부탁드립니다 🙏\n"
+            f"취소 문의는 전화로 연락 주세요 📞 {shop['contact']}"
         )
     return None
 
