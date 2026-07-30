@@ -453,12 +453,17 @@ class AgentService:
         deadline = time.monotonic() + timeout_sec
         reply = None
         timed_out = False
+        # 오버로드(529)는 수 초~수십 초 지속될 수 있으므로, 콜백 모드의 50초 예산을
+        # 넓게 써서 t=0~30초에 걸쳐 재시도한다. 짧은 버스트뿐 아니라 20~30초짜리
+        # 오버로드도 흡수 → 손님이 오류 대신 정상 답변을 받을 확률을 크게 높인다.
         attempts = [
             (MODEL, 0.0),            # 1) 주 모델 즉시
-            (FALLBACK_MODEL, 0.35),  # 2) 폴백 모델 — 동기 모드는 보통 여기까지
-            (MODEL, 1.0),            # 3) 주 모델 재시도 (blip이 걷혔을 가능성)
-            (FALLBACK_MODEL, 2.0),   # 4) 폴백 모델 재시도
-            (MODEL, 3.0),            # 5) 콜백 모드의 넉넉한 예산 활용
+            (FALLBACK_MODEL, 0.5),   # 2) 폴백 모델 — 동기 모드는 보통 여기까지
+            (MODEL, 1.5),            # 3) 주 모델 재시도
+            (FALLBACK_MODEL, 3.0),   # 4) 폴백 모델 재시도
+            (MODEL, 5.0),            # 5~) 이하 콜백 모드(50s)에서만 도달
+            (FALLBACK_MODEL, 8.0),
+            (MODEL, 12.0),
         ]
         for attempt, (model, backoff) in enumerate(attempts, start=1):
             if backoff:
@@ -490,10 +495,12 @@ class AgentService:
             # 재시도까지 실패 → 단골 질문(가격 등)은 서버가 직접 답변
             reply = _static_fallback(message, shop_key)
         if reply is None:
-            if timed_out:
-                reply = "죄송해요, 응답이 잠깐 지연됐어요!\n전화로 문의해 주시면 바로 안내해 드릴게요 📞 010-6547-1067"
-            else:
-                reply = "죄송해요, 잠시 오류가 발생했어요. 전화로 문의해 주세요 📞 010-6547-1067"
+            # 오류처럼 보이는 문구는 손님을 불안하게 한다 → 자연스러운 안내로 통일.
+            reply = (
+                "안녕하세요! 서퍼스트입니다 🏄\n"
+                "지금 문의가 많아 답변이 조금 늦어지고 있어요.\n"
+                "빠른 안내는 전화 주시면 바로 도와드릴게요 📞 010-6547-1067"
+            )
 
         # 대화 기록에 AI 응답 추가 후 최근 N턴만 보관 (무한 증가 방지)
         conversation_history[user_id].append({"role": "assistant", "content": reply})
