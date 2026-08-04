@@ -54,10 +54,12 @@ async def post_reservation(
     amount: str = Form("0"),
     payment_method: str = Form("계좌이체"),
     deposit_amount: str = Form("0"),
+    status: str = Form("예약"),
     _=Depends(require_admin),
 ):
     row = await av.add_reservation(
-        date, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount
+        date, program, time_slot, customer_name, people, platform, memo, amount, payment_method, deposit_amount,
+        status=status,
     )
     return {"ok": True, "reservation": row}
 
@@ -222,6 +224,8 @@ ADMIN_HTML = """<!DOCTYPE html>
   .res-main { display:flex; align-items:center; gap:10px; padding:10px 4px; }
   .tr-noshow { opacity:.5; }
   .tr-noshow .r-nm { text-decoration:line-through; }
+  .tr-canceled { opacity:.45; }
+  .tr-canceled .r-nm { text-decoration:line-through; }
   .tr-pending  { border-left:3px solid #f59e0b; padding-left:6px; background:rgba(245,158,11,.06); }
   .tr-deposited { border-left:3px solid #10b981; padding-left:6px; background:rgba(16,185,129,.06); }
   .r-time { min-width:52px; font-weight:900; font-size:17px; color:var(--accent); white-space:nowrap; flex-shrink:0; }
@@ -239,6 +243,8 @@ ADMIN_HTML = """<!DOCTYPE html>
   .nobadge  { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
   .pendbadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#f59e0b;
+               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
+  .cxbadge   { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#64748b;
                padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
   .daysum { text-align:right; padding:14px 6px 2px; font-size:16px; color:var(--sub); }
   .daysum b { color:var(--ok); font-size:19px; font-weight:900; margin-left:6px; }
@@ -358,6 +364,13 @@ ADMIN_HTML = """<!DOCTYPE html>
           <option value="계좌이체">💳 계좌이체</option>
           <option value="현장카드">💳 현장카드</option>
           <option value="현금">💵 현금</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>상태</label>
+        <select id="f_status">
+          <option value="예약">✅ 예약 확정</option>
+          <option value="입금대기">⏳ 입금대기 (가예약)</option>
         </select>
       </div>
       <div class="field">

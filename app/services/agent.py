@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 import anthropic
 from app.config import settings
 from app.services.alerts import FailureAlarm
+from app.services.api_health import anthropic_circuit, classify_fatal
+from app.services.usage import tracker as usage_tracker
 from app.services.weather import get_operation_status
 from app.services.availability import build_availability_text, today_str
 
@@ -32,7 +34,7 @@ def build_calendar_text(days: int = 21) -> str:
 MODEL = "claude-haiku-4-5-20251001"  # 주 모델: 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
 # 폴백 모델: 주 모델이 일시 오류(529 오버로드 등)를 뱉을 때만 사용. 별도 용량 풀이라
 # 같은 순간 오버로드를 피할 확률이 높다. Haiku보다 느리지만 폴백 경로는 드물다.
-FALLBACK_MODEL = "claude-sonnet-4-6"
+FALLBACK_MODEL = "claude-sonnet-5"
 
 # 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
 # ── 중요: 외부 API(KMA/Supabase) 호출은 백그라운드 루프(main.py)에서만 수행한다.
@@ -102,7 +104,7 @@ async def warm_anthropic_cache() -> None:
     try:
         if _warm_client is None:
             _warm_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        await _warm_client.messages.create(
+        warm_resp = await _warm_client.messages.create(
             model=MODEL,
             max_tokens=1,
             system=[
@@ -115,10 +117,21 @@ async def warm_anthropic_cache() -> None:
             messages=[{"role": "user", "content": "."}],
             extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
         )
+        # 워밍은 하루 360회 돈다. 캐시가 실제로 만들어지는지 여기서 반드시 확인해야
+        # 한다 — 안 만들어지면 이 루프는 매달 수십 달러를 아무 효과 없이 태운다.
+        usage_tracker.record(MODEL, getattr(warm_resp, "usage", None), "warm")
+        # 워밍 성공 = API 정상. 회로가 열려 있었다면 여기서만 복구된다
+        # (요청 경로에서 복구를 탐지하면 손님이 그 대기시간을 부담하게 되므로).
+        await anthropic_circuit.close()
         await _warm_alarm.ok()
     except Exception as e:
         logger.warning(f"프롬프트 캐시 워밍 실패({_warm_alarm.fail_count + 1}연속): {e}")
-        await _warm_alarm.fail(e)
+        fatal = classify_fatal(e)
+        if fatal:
+            # 크레딧 소진·키 만료 등 재시도 무의미 오류 → 회로 개방 + 전용 경보(30분 주기)
+            await anthropic_circuit.trip(fatal[0], fatal[1], e)
+        else:
+            await _warm_alarm.fail(e)
 
 
 # ── 읽기 전용 getter (요청 경로에서 사용, 외부 호출 없음) ──────────────────────
@@ -253,6 +266,34 @@ def build_system_prompt(shop_key: str = "default") -> str:
 외국어 답변에도 가격(₩30,000 형식)·시간·링크·전화번호는 동일하게 안내하세요.
 휴무 안내 예: "We are closed on Tuesdays."
 
+[외국어 응답 예시 - 영어 문의 "How much is paddleboarding?"]
+Hello! This is Surf1st 🏄
+💰 Paddleboard (2-hour session): ₩30,000 rental / ₩50,000 with lesson
+⏰ Day sessions: 10:00 / 13:00 / 15:00 · Sunset session: 18:30
+We are closed on Tuesdays.
+
+https://smartstore.naver.com/fourseason_1/products/8356965224
+Please leave a review after your visit 😊
+
+[외국어 응답 예시 - 일본어 문의 「カヤックの予約はできますか？」]
+こんにちは！Surf1stです 🏄
+はい、カヤックのご予約が可能です！
+💰 お一人様 ₩30,000（2時間体験、2人乗り1艇が基準）
+⏰ 開始時間: 10:00 / 13:00 / 15:00 · サンセットは18:30
+火曜日は定休日です。
+
+https://smartstore.naver.com/fourseason_1/products/8356965224
+ご利用後のレビューもお願いします 😊
+
+[외국어 응답 예시 - 중국어 문의 "桨板多少钱？"]
+您好！这里是Surf1st 🏄
+💰 桨板（2小时体验）：租赁 ₩30,000 / 含教学 ₩50,000
+⏰ 白天场 10:00 / 13:00 / 15:00 · 日落场 18:30
+周二休息。
+
+https://smartstore.naver.com/fourseason_1/products/8356965224
+欢迎体验后留下评价 😊
+
 ★ URL(스마트스토어 링크)은 반드시 완전한 형태로 출력하세요. 중간에 잘리면 손님이 접속 불가.
 ★ 링크를 붙일 때는 마무리 리뷰 멘트가 잘려도 링크 자체는 절대 자르지 마세요.
 
@@ -313,6 +354,22 @@ https://smartstore.naver.com/fourseason_1/products/8356965224
 손님이 말한 요일이 달력과 다르면 달력이 정답입니다. 달력 기준으로 부드럽게 안내하세요.
 달력에 없는 먼 날짜는 요일을 언급하지 말고 날짜만 말하세요.
 
+[상대 날짜 해석 예시 - 오늘이 7/1(수)라고 가정할 때]
+- "내일" → 7/2. 달력에서 7/2의 요일을 읽어 그대로 쓴다.
+- "모레" → 7/3.
+- "이번 주말" → 달력에서 가장 가까운 토·일을 찾아 그 날짜로 답한다.
+- "다음주 화요일" → 달력에서 다음 주의 화요일을 찾는다. 화요일은 휴무이므로
+  "화요일은 휴무예요 😊 수요일이나 다른 요일은 어떠세요?"처럼 대안을 제안한다.
+- "이번 달 말" → 손님이 날짜를 특정하도록 "혹시 날짜 정해지셨을까요?" 한 번만 확인.
+- 손님이 "금요일에 가려고요"처럼 요일만 말하면 → 달력에서 가장 가까운 그 요일 날짜로
+  해석하고, 답변에 날짜를 함께 표기해 오해를 방지한다 (예: "7/3(금) 예약 가능합니다!").
+
+[예약 가능 현황 읽는 법]
+- dynamic 블록의 [예약 가능 현황]에는 "마감된 타임만" 표시된다.
+- 손님이 물은 날짜·종목·시간이 현황에 없으면 = 예약 가능. 바로 "예약 가능합니다!"
+- 현황에 마감으로 있으면 = 그 타임만 마감. 같은 날 다른 시간대나 다른 날짜를 제안한다.
+- 현황이 비어 있으면 = 전 타임 예약 가능.
+
 [카약 특이사항]
 2인 1카약 기준, 요금은 인당 3만원. 예약은 인당 1개.
 인원/예약 수 문의 시 답변:
@@ -341,6 +398,31 @@ https://smartstore.naver.com/fourseason_1/products/8356965224
 촬영된 사진을 받는 방법 문의(카톡으로 주는지, 언제·어떻게 받는지 등) 시:
 "사진은 사장님께서 직접 챙겨드리고 있어요 📸
 사장님께 연락 주시면 바로 안내받으실 수 있습니다 📞 {shop['contact']}"
+
+[포일 3종 구분 - 손님이 "포일"이라고만 하면 헷갈리기 쉬움]
+- 전동e포일: 1시간 체험, 시간 협의 후 예약. 렌탈 8만원 / 강습포함 15만원.
+  스마트스토어 링크로 결제 가능.
+- E포일: 3시간 체험, 정원 2명, 09:00/13:00 시작. 렌탈 8만원 / 강습포함 15만원.
+  링크 없음 → 전화 예약 (010-6547-1067).
+- 펌핑포일: 2시간 체험, 시간 협의 후 예약. 렌탈 7만원 / 강습포함 10만원.
+  링크 없음 → 전화 예약 (010-6547-1067).
+- 손님이 그냥 "포일 타고 싶어요"라고 하면 어떤 포일인지 한 번만 확인한다
+  (예: "전동e포일과 E포일, 펌핑포일이 있어요! 어떤 체험을 원하세요?").
+
+[스냅사진]
+- 스냅사진 촬영 상품 문의 시 스냅사진 스마트스토어 링크를 안내한다.
+- 이미 촬영된 사진을 받는 방법 문의는 아래 [사진 수령] 안내를 따른다.
+
+[응대 세부 원칙]
+- 첫 메시지에는 "안녕하세요! 서퍼스트입니다 🏄"로 인사하되, 대화가 이어지는 중이면
+  인사를 반복하지 않고 바로 본론으로 답한다.
+- 손님이 이미 말한 정보(날짜·인원·종목)를 다시 묻지 않는다. 짧은 문장(예: "패들 내일 2명")도
+  최대한 해석해 바로 답한다.
+- 같은 질문이 반복되어도 처음처럼 친절하게 같은 내용을 안내한다.
+- 확실하지 않은 정보는 절대 지어내지 않는다. 모르면 전화 안내로 연결한다.
+- 한 답변 안에서 같은 링크를 두 번 반복하지 않는다.
+- 가격 문의에 종목이 특정되면 그 종목만 답하고, 종목 언급이 없을 때만 전체 요금을 안내한다.
+- 답변은 항상 완결된 문장으로 끝낸다. 링크가 포함되면 링크 뒤에 짧은 마무리 한 줄.
 
 [주의사항]
 - 모르는 정보: "정확한 내용은 전화로 문의해 주세요 📞 {shop['contact']}".
@@ -371,6 +453,10 @@ class AgentService:
         """
         import asyncio
 
+        # 회로 개방 중에는 호출해봐야 실패 로그만 쌓인다 → 바로 키워드 폴백.
+        if anthropic_circuit.is_open:
+            return any(kw in message for kw in BOOKING_KEYWORDS)
+
         try:
             response = await asyncio.wait_for(
                 self.client.messages.create(
@@ -381,6 +467,7 @@ class AgentService:
                 ),
                 timeout=10.0,
             )
+            usage_tracker.record(MODEL, getattr(response, "usage", None), "intent")
             verdict = response.content[0].text.strip().upper()
             if verdict.startswith("Y"):
                 return True
@@ -465,6 +552,15 @@ class AgentService:
             (FALLBACK_MODEL, 8.0),
             (MODEL, 12.0),
         ]
+        # 회로가 열려 있으면(크레딧 소진 등 확정 장애) 호출 자체를 건너뛴다.
+        # 어차피 7회 전멸할 요청에 손님을 30초 기다리게 하지 않는다 → 즉시 정적 폴백.
+        if anthropic_circuit.is_open:
+            logger.warning(
+                f"Anthropic 회로 개방 상태({anthropic_circuit.kind}) — "
+                f"호출 생략하고 즉시 폴백 [{user_id}]"
+            )
+            attempts = []
+
         for attempt, (model, backoff) in enumerate(attempts, start=1):
             if backoff:
                 await asyncio.sleep(backoff)
@@ -482,6 +578,7 @@ class AgentService:
                     ),
                     timeout=remaining,  # 콜백 모드: 50s, 동기 모드: 4.2s (재시도 시 잔여분)
                 )
+                usage_tracker.record(model, getattr(response, "usage", None), "reply")
                 reply = response.content[0].text
                 break
             except asyncio.TimeoutError:
@@ -490,6 +587,13 @@ class AgentService:
                 break
             except Exception as e:
                 logger.error(f"AI 응답 오류(시도 {attempt}, 모델 {model}): {e}")
+                fatal = classify_fatal(e)
+                if fatal:
+                    # 재시도해도 100% 실패 → 남은 시도를 버리고 회로를 열어
+                    # 이후 손님들은 대기 없이 폴백을 받는다. 워밍 루프보다 먼저
+                    # 손님 요청이 장애를 감지하는 경우가 있어 여기서도 회로를 연다.
+                    await anthropic_circuit.trip(fatal[0], fatal[1], e)
+                    break
 
         if reply is None:
             # 재시도까지 실패 → 단골 질문(가격 등)은 서버가 직접 답변

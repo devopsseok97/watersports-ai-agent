@@ -39,7 +39,9 @@ def _rate_limited(ip: str) -> bool:
 
 @router.get("/", include_in_schema=False)
 async def landing_page():
-    return FileResponse(_LANDING_HTML, media_type="text/html")
+    # no-cache: 재검증 강제 (ETag로 미변경 시 304). 개편 직후 구버전 캐시 노출 방지.
+    return FileResponse(_LANDING_HTML, media_type="text/html",
+                        headers={"Cache-Control": "no-cache"})
 
 
 @router.post("/api/leads")

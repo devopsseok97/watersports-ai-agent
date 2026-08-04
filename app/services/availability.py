@@ -77,13 +77,18 @@ async def add_reservation(
     amount: int = 0,
     payment_method: str = "계좌이체",
     deposit_amount: int = 0,
+    status: str = "예약",
 ) -> dict:
-    """예약 1건 추가."""
+    """예약 1건 추가. 입금 전 문의는 status='입금대기'로 기록 → 전환율 측정."""
     client = await get_supabase()
     pay = (payment_method or "계좌이체").strip()
     if pay not in PAYMENT_METHODS:
         pay = "계좌이체"
+    status = (status or "예약").strip()
+    if status not in ("예약", "입금대기"):
+        status = "예약"
     row = {
+        "status": status,
         "slot_date": date_str,
         "program": program,
         "time_slot": (time_slot or "").strip(),
@@ -146,14 +151,15 @@ async def delete_reservation(res_id: int):
 
 
 async def set_reservation_status(res_id: int, status: str) -> dict:
-    """예약 상태 변경 ('예약' / '입금대기' / '노쇼').
+    """예약 상태 변경 ('예약' / '입금대기' / '노쇼' / '취소').
 
     - 입금대기: 선결제 대기 가예약. 잔여석은 점유(자리 잡아둠)하되
       수입/확정 통계엔 안 잡힘. 입금 확인되면 '예약'으로 확정.
     - 노쇼: 잔여석 집계에서 제외(자리 복구)되지만 기록은 남음. → 노쇼율 통계.
+    - 취소: 기록은 보존하되 잔여석·수입·노쇼율 등 모든 통계에서 제외.
     """
     status = (status or "예약").strip()
-    if status not in ("예약", "노쇼", "입금대기"):
+    if status not in ("예약", "노쇼", "입금대기", "취소"):
         status = "예약"
     client = await get_supabase()
     res = (
@@ -222,6 +228,13 @@ async def get_reservation_stats() -> dict:
     def is_pending(r):
         return status_of(r) == "입금대기"
 
+    def is_canceled(r):
+        return status_of(r) == "취소"
+
+    # 취소 건은 기록만 보존 — 모든 통계(분모 포함)에서 제외
+    canceled_total = sum(1 for r in all_rows if is_canceled(r))
+    all_rows = [r for r in all_rows if not is_canceled(r)]
+
     # 예약확정/수입 = '예약'만. 입금대기(미입금)·노쇼는 수입에서 제외.
     rows = [r for r in all_rows if status_of(r) == "예약"]    # 확정 건만
     noshow_rows = [r for r in all_rows if is_noshow(r)]        # 노쇼 건만
@@ -272,6 +285,7 @@ async def get_reservation_stats() -> dict:
         "month_noshow": month_noshow,
         "month_noshow_rate": month_noshow_rate,
         "total_all": total_all,
+        "canceled_total": canceled_total,
         # ── 입금대기(선결제 가예약) 지표 ──
         "pending_total": pending_total,
         "pending_people": pending_people,
@@ -294,10 +308,10 @@ async def get_reservations_range(start: str, end: str) -> list[dict]:
 
 
 def aggregate(rows: list[dict]) -> dict[tuple, int]:
-    """(날짜, 종목, 시간) → 인원 합계. 노쇼 건은 제외(자리 복구)."""
+    """(날짜, 종목, 시간) → 인원 합계. 노쇼·취소 건은 제외(자리 복구)."""
     agg: dict[tuple, int] = {}
     for r in rows:
-        if (r.get("status") or "예약") == "노쇼":
+        if (r.get("status") or "예약") in ("노쇼", "취소"):
             continue
         k = (r["slot_date"], r["program"], r.get("time_slot") or "")
         agg[k] = agg.get(k, 0) + (r.get("people") or 0)
@@ -312,8 +326,8 @@ async def get_day_summary(date_str: str) -> list[dict]:
     rows = await get_reservations(date_str)
     agg: dict[tuple, int] = {}
     for r in rows:
-        if (r.get("status") or "예약") == "노쇼":
-            continue  # 노쇼는 자리 복구 → 집계 제외
+        if (r.get("status") or "예약") in ("노쇼", "취소"):
+            continue  # 노쇼·취소는 자리 복구 → 집계 제외
         agg[(r["program"], r.get("time_slot") or "")] = (
             agg.get((r["program"], r.get("time_slot") or ""), 0) + (r.get("people") or 0)
         )
