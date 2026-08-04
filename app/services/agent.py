@@ -32,7 +32,7 @@ def build_calendar_text(days: int = 21) -> str:
 MODEL = "claude-haiku-4-5-20251001"  # 주 모델: 빠르고 저렴. 캐시 워밍과 반드시 동일 모델 사용
 # 폴백 모델: 주 모델이 일시 오류(529 오버로드 등)를 뱉을 때만 사용. 별도 용량 풀이라
 # 같은 순간 오버로드를 피할 확률이 높다. Haiku보다 느리지만 폴백 경로는 드물다.
-FALLBACK_MODEL = "claude-sonnet-5"
+FALLBACK_MODEL = "claude-sonnet-4-6"
 
 # 날씨·잔여석 인메모리 캐시 (Railway 재시작 시 초기화)
 # ── 중요: 외부 API(KMA/Supabase) 호출은 백그라운드 루프(main.py)에서만 수행한다.
