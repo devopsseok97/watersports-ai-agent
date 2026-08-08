@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.config import settings
 from app.models.kakao import KakaoWebhookRequest, KakaoWebhookResponse
-from app.services.agent import AgentService
+from app.services.agent import AgentService, FALLBACK_NOTICE
 from app.services.db import save_conversation
 from app.services.slack import notify_inquiry
 import httpx, logging, asyncio, secrets, time
@@ -81,11 +81,7 @@ async def _safe_reply(
         )
     except Exception as e:
         logger.error(f"AI 응답 생성 실패: {e}")
-        return (
-            "안녕하세요! 서퍼스트입니다 🏄\n"
-            "지금 문의가 많아 답변이 조금 늦어지고 있어요.\n"
-            "빠른 안내는 전화 주시면 바로 도와드릴게요 📞 010-6547-1067"
-        )
+        return FALLBACK_NOTICE
 
 
 # ── 콜백 대기 모드 (오픈빌더에서 활성화 시 카톡이 callbackUrl 전달) ─────────
@@ -156,10 +152,19 @@ def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: as
     task.add_done_callback(_bg_tasks.discard)
 
 
+# AI가 답을 못 하고 손님을 전화로 넘긴 경우를 판별하는 문구들.
+# 안내문 문구가 바뀌면 여기도 함께 바뀌어야 하며, tests/test_escalation.py가
+# 실제 폴백 경로 전부를 대조해 누락을 막는다.
+_ESCALATION_MARKERS = (
+    "전화로 문의", "전화 문의", "전화 주시면", "전화로 연락",
+    "전화 주세요", "전화로 예약", "연락 주시면",
+)
+
+
 async def _record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
     # 백그라운드 태스크라 LLM 분류를 써도 카톡 5초 타임아웃과 무관
     is_booking_intent = await agent_service.classify_booking_intent(user_message)
-    is_escalation = "전화로 문의" in reply or "전화 문의" in reply
+    is_escalation = any(marker in reply for marker in _ESCALATION_MARKERS)
     try:
         await save_conversation(
             user_id=user_id,

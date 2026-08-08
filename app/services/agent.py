@@ -186,6 +186,16 @@ SHOP_CONFIG = {
     }
 }
 
+# AI 호출이 전멸했을 때 손님에게 나가는 최종 안내문.
+# 상수로 둔 이유: 예전에 agent.py와 kakao.py에 같은 문구를 따로 적어두었다가
+# 한쪽만 문구를 바꾸는 바람에, 이 안내문이 나가도 슬랙 에스컬레이션 표시가
+# 안 되는 사고가 있었다. 문구는 반드시 여기 한 곳에서만 정의한다.
+FALLBACK_NOTICE = (
+    "안녕하세요! 서퍼스트입니다 🏄\n"
+    "지금 문의가 많아 답변이 조금 늦어지고 있어요.\n"
+    "빠른 안내는 전화 주시면 바로 도와드릴게요 📞 010-6547-1067"
+)
+
 _PRICE_KEYWORDS = ("가격", "요금", "얼마", "비용", "금액", "price", "cost", "how much")
 _PHOTO_KEYWORDS = ("사진", "포토", "photo", "picture", "이미지")
 _BOOKING_QUERY_KEYWORDS = (
@@ -539,7 +549,6 @@ class AgentService:
         # 타임아웃은 시간이 소진된 것이므로 재시도하지 않는다.
         deadline = time.monotonic() + timeout_sec
         reply = None
-        timed_out = False
         # 오버로드(529)는 수 초~수십 초 지속될 수 있으므로, 콜백 모드의 50초 예산을
         # 넓게 써서 t=0~30초에 걸쳐 재시도한다. 짧은 버스트뿐 아니라 20~30초짜리
         # 오버로드도 흡수 → 손님이 오류 대신 정상 답변을 받을 확률을 크게 높인다.
@@ -562,9 +571,15 @@ class AgentService:
             attempts = []
 
         for attempt, (model, backoff) in enumerate(attempts, start=1):
-            if backoff:
-                await asyncio.sleep(backoff)
             remaining = deadline - time.monotonic()
+            if backoff:
+                # 예산 밖까지 자고 나서 포기하면, 잔 시간만큼 통째로 늦어진다.
+                # (동기 모드 4.2초 예산에서 5.0초에 응답 → 카톡 5초 타임아웃 초과)
+                backoff = min(backoff, remaining - 0.5)
+                if backoff <= 0:
+                    break
+                await asyncio.sleep(backoff)
+                remaining = deadline - time.monotonic()
             if remaining < 0.5:
                 break
             try:
@@ -583,7 +598,6 @@ class AgentService:
                 break
             except asyncio.TimeoutError:
                 logger.warning(f"AI 응답 타임아웃 [{user_id}] (모델 {model})")
-                timed_out = True
                 break
             except Exception as e:
                 logger.error(f"AI 응답 오류(시도 {attempt}, 모델 {model}): {e}")
@@ -600,11 +614,7 @@ class AgentService:
             reply = _static_fallback(message, shop_key)
         if reply is None:
             # 오류처럼 보이는 문구는 손님을 불안하게 한다 → 자연스러운 안내로 통일.
-            reply = (
-                "안녕하세요! 서퍼스트입니다 🏄\n"
-                "지금 문의가 많아 답변이 조금 늦어지고 있어요.\n"
-                "빠른 안내는 전화 주시면 바로 도와드릴게요 📞 010-6547-1067"
-            )
+            reply = FALLBACK_NOTICE
 
         # 대화 기록에 AI 응답 추가 후 최근 N턴만 보관 (무한 증가 방지)
         conversation_history[user_id].append({"role": "assistant", "content": reply})
