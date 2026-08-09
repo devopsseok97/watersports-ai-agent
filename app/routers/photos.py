@@ -46,21 +46,44 @@ def _check_code(code: str) -> None:
 
 
 async def _storage_list(code: str) -> list[str]:
-    """Supabase Storage에서 앨범 폴더의 파일명 목록 반환."""
+    """Supabase Storage에서 앨범 폴더의 파일명 목록 반환. 조회 실패는 예외로 올린다.
+
+    실패를 빈 목록으로 뭉개면 안 된다. 만료 정리가 조회에 실패한 앨범의
+    DB 레코드만 지우고 파일은 남기는데, 코드가 사라지면 {code}/ 폴더를
+    다시 찾을 단서가 없어 영구 고아 파일이 된다.
+    """
     _check_code(code)
     client = await get_supabase()
+    items = await client.storage.from_(STORAGE_BUCKET).list(
+        path=code, options={"limit": 3000, "offset": 0}
+    )
+    names = []
+    for item in (items or []):
+        name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
+        if name:
+            names.append(name)
+    names.sort()
+    return names
+
+
+async def _storage_list_safe(code: str) -> list[str]:
+    """열람 화면용 — 조회가 실패해도 빈 화면으로 넘어간다."""
     try:
-        items = await client.storage.from_(STORAGE_BUCKET).list(path=code, options={"limit": 3000, "offset": 0})
-        names = []
-        for item in (items or []):
-            name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
-            if name:
-                names.append(name)
-        names.sort()
-        return names
+        return await _storage_list(code)
     except Exception as e:
         logger.error(f"Storage list 실패 [{code}]: {e}")
         return []
+
+
+async def _sync_photo_count(code: str, fallback: int) -> int:
+    """Storage 실제 파일 수를 DB에 반영. 조회 실패 시 기존 값을 유지한다."""
+    try:
+        names = await _storage_list(code)
+    except Exception as e:
+        logger.error(f"사진 수 갱신 실패 [{code}]: {e}")
+        return fallback
+    await album.set_photo_count(code, len(names))
+    return len(names)
 
 
 async def _public_url(client, code: str, filename: str) -> str:
@@ -115,9 +138,8 @@ async def upload_photos(
         except Exception as e:
             logger.error(f"Storage upload 실패 [{code}/{filename}]: {e}")
 
-    names = await _storage_list(code)
-    await album.set_photo_count(code, len(names))
-    return {"saved": saved, "photo_count": len(names)}
+    count = await _sync_photo_count(code, al.get("photo_count") or 0)
+    return {"saved": saved, "photo_count": count}
 
 
 @router.get("/api/albums")
@@ -130,7 +152,7 @@ async def list_albums_api(_=Depends(require_admin)):
 
 @router.get("/api/albums/{code}/photos")
 async def list_photos_api(code: str, _=Depends(require_admin)):
-    return await _storage_list(code)
+    return await _storage_list_safe(code)
 
 
 @router.delete("/api/albums/{code}/photos/{filename}")
@@ -145,9 +167,9 @@ async def delete_photo_api(code: str, filename: str, _=Depends(require_admin)):
         logger.error(f"Storage delete 실패 [{code}/{filename}]: {e}")
         raise HTTPException(500, "파일 삭제 실패")
 
-    names = await _storage_list(code)
-    await album.set_photo_count(code, len(names))
-    return {"deleted": filename, "photo_count": len(names)}
+    al = await album.get_album(code)
+    count = await _sync_photo_count(code, (al or {}).get("photo_count") or 0)
+    return {"deleted": filename, "photo_count": count}
 
 
 async def cleanup_expired_albums() -> int:
@@ -181,13 +203,14 @@ async def delete_album_api(code: str, _=Depends(require_admin)):
 
     _check_code(code)
     client = await get_supabase()
-    names = await _storage_list(code)
-    if names:
-        paths = [f"{code}/{n}" for n in names]
-        try:
-            await client.storage.from_(STORAGE_BUCKET).remove(paths)
-        except Exception as e:
-            logger.error(f"Storage 폴더 삭제 실패 [{code}]: {e}")
+    # 파일을 못 지운 채 DB 레코드부터 지우면 그 폴더는 다시 찾을 수 없다 → 중단하고 재시도 유도
+    try:
+        names = await _storage_list(code)
+        if names:
+            await client.storage.from_(STORAGE_BUCKET).remove([f"{code}/{n}" for n in names])
+    except Exception as e:
+        logger.error(f"Storage 폴더 삭제 실패 [{code}]: {e}")
+        raise HTTPException(500, "사진 파일 삭제에 실패했어요. 잠시 후 다시 시도해 주세요.")
 
     await album.delete_album(code)
     return {"deleted": code}
@@ -231,7 +254,7 @@ async def public_gallery(code: str):
     if album.is_expired(al):
         return HTMLResponse(_simple_page("앨범이 만료되었어요 ⏰", "사진은 7일간만 보관돼요. 사장님께 문의해 주세요."), status_code=410)
 
-    names = await _storage_list(code)
+    names = await _storage_list_safe(code)
     if not names:
         return HTMLResponse(_simple_page("사진 준비 중이에요 📸", "잠시 후 다시 확인해 주세요."))
 
