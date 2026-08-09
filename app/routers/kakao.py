@@ -59,10 +59,27 @@ def _rate_limited(user_id: str) -> bool:
 _bg_tasks: set[asyncio.Task] = set()
 
 
-def _spawn_record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
-    task = asyncio.create_task(_record(user_id, user_message, reply, response_ms))
+def _track(task: asyncio.Task, what: str) -> None:
+    """태스크 참조 보관 + 예외를 로그에 남긴다.
+
+    예외를 회수하지 않으면 대화 저장·슬랙 알림이 통째로 사라져도
+    (GC 시점의 모호한 경고 외에는) 아무 흔적이 남지 않는다.
+    """
     _bg_tasks.add(task)
-    task.add_done_callback(_bg_tasks.discard)
+
+    def _done(t: asyncio.Task) -> None:
+        _bg_tasks.discard(t)
+        if not t.cancelled() and t.exception() is not None:
+            logger.error(f"백그라운드 작업 실패({what}): {t.exception()!r}")
+
+    task.add_done_callback(_done)
+
+
+def _spawn_record(user_id: str, user_message: str, reply: str, response_ms: int | None = None):
+    _track(
+        asyncio.create_task(_record(user_id, user_message, reply, response_ms)),
+        "대화 저장·알림",
+    )
 
 
 async def _safe_reply(
@@ -147,9 +164,10 @@ async def _dispatch_callback(callback_url: str, user_id: str, user_message: str,
 
 
 def _spawn_callback(callback_url: str, user_id: str, user_message: str, lock: asyncio.Lock):
-    task = asyncio.create_task(_dispatch_callback(callback_url, user_id, user_message, lock))
-    _bg_tasks.add(task)
-    task.add_done_callback(_bg_tasks.discard)
+    _track(
+        asyncio.create_task(_dispatch_callback(callback_url, user_id, user_message, lock)),
+        f"콜백 응답 전송 [{user_id}]",
+    )
 
 
 # AI가 답을 못 하고 손님을 전화로 넘긴 경우를 판별하는 문구들.

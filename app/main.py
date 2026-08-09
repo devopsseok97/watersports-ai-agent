@@ -14,7 +14,37 @@ logging.basicConfig(level=logging.INFO)
 
 _log = logging.getLogger(__name__)
 if not getattr(settings, "admin_password", ""):
-    _log.warning("⚠️  ADMIN_PASSWORD 미설정: 관리자 대시보드 인증 없이 접근 허용됨 (운영 환경에서는 반드시 설정하세요)")
+    _log.warning("⚠️  ADMIN_PASSWORD 미설정: 관리자 대시보드 접근이 전면 차단됩니다 (auth.py fail-closed). 운영 환경에서는 반드시 설정하세요")
+
+
+def _watch(task: asyncio.Task, name: str) -> asyncio.Task:
+    """백그라운드 루프가 죽으면 즉시 드러나게 한다.
+
+    특히 캐시 워밍 루프가 죽으면 회로차단기를 닫을 수단이 사라진다
+    (api_health.py: 복구 신호는 워밍 성공이 유일) → 영구 장애.
+    """
+    def _done(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is None:
+            _log.error(f"백그라운드 루프 '{name}'가 예고 없이 종료됨 (무한 루프여야 함)")
+        else:
+            _log.error(f"백그라운드 루프 '{name}' 비정상 종료: {exc!r}")
+        from app.services.slack import notify_system_alert
+        alert = asyncio.create_task(notify_system_alert(
+            f"🔴 *백그라운드 루프 중단* — `{name}`\n"
+            f"원인: {exc!r}\n"
+            f"재배포(Railway restart) 전까지 이 루프의 기능은 멈춘 상태입니다."
+        ))
+        _shutdown_guard.add(alert)
+        alert.add_done_callback(_shutdown_guard.discard)
+
+    task.add_done_callback(_done)
+    return task
+
+
+_shutdown_guard: set[asyncio.Task] = set()
 
 
 @asynccontextmanager
@@ -89,10 +119,10 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(180)  # 3분마다
 
     tasks = [
-        asyncio.create_task(_cleanup_loop()),
-        asyncio.create_task(_naver_sync_loop()),
-        asyncio.create_task(_cache_refresh_loop()),
-        asyncio.create_task(_keepalive_loop()),
+        _watch(asyncio.create_task(_cleanup_loop()), "만료 앨범 정리"),
+        _watch(asyncio.create_task(_naver_sync_loop()), "네이버 주문 동기화"),
+        _watch(asyncio.create_task(_cache_refresh_loop()), "캐시 갱신·프롬프트 워밍"),
+        _watch(asyncio.create_task(_keepalive_loop()), "keep-alive 핑"),
     ]
     yield
     for t in tasks:
