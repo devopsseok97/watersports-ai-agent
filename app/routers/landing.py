@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.services.db import save_lead
+from app.services.ratelimit import client_key
 from app.services.slack import notify_lead
 
 logger = logging.getLogger(__name__)
@@ -27,21 +28,6 @@ class LeadIn(BaseModel):
     business_name: str = Field(default="", max_length=100)
     message: str = Field(default="", max_length=2000)
     website: str = ""  # honeypot — 사람 눈에 안 보이는 필드, 채워져 있으면 봇
-
-
-def _client_key(request: Request) -> str:
-    """레이트리밋 집계 키.
-
-    request.client.host는 레일웨이 엣지 프록시의 IP라 모든 방문자가 한 값으로
-    뭉친다. 그대로 쓰면 시간당 5건이 사이트 전체 합산이 되어 6번째 손님부터
-    문의 자체가 막힌다. 프록시가 붙여주는 X-Forwarded-For의 첫 항목을 쓴다.
-    헤더는 위조 가능하지만 여기서 거르려는 건 공격자가 아니라 중복 제출과
-    단순 스팸이고, 봇은 honeypot이 따로 잡는다.
-    """
-    xff = request.headers.get("x-forwarded-for", "")
-    if xff:
-        return xff.split(",")[0].strip()[:64]
-    return request.client.host if request.client else "unknown"
 
 
 def _rate_limited(key: str) -> bool:
@@ -75,7 +61,7 @@ async def landing_page():
 async def create_lead(lead: LeadIn, request: Request):
     if lead.website:
         return {"ok": True}  # 봇에게 성공으로 응답하고 조용히 버림
-    if _rate_limited(_client_key(request)):
+    if _rate_limited(client_key(request)):
         raise HTTPException(status_code=429, detail="잠시 후 다시 시도해주세요")
 
     # 저장이 실패해도 알림은 반드시 보낸다. 리드는 오손 영업의 유일한 입구라

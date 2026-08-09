@@ -1,11 +1,17 @@
 """사장님용 웹 관리자 대시보드."""
 import secrets
 import logging
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.config import settings
 from app.services.auth import verify_session, make_token, SESSION_COOKIE
+from app.services.ratelimit import (
+    client_key,
+    login_locked,
+    record_login_failure,
+    record_login_success,
+)
 from app.services.db import (
     get_recent_conversations,
     get_booking_intents,
@@ -35,16 +41,26 @@ async def login_page(asess: str | None = Cookie(default=None)):
 
 @router.post("/login")
 async def login_submit(
+    request: Request,
     password: str = Form(...),
     remember: str = Form(default=""),
 ):
+    key = client_key(request)
+    if login_locked("admin", key):
+        return HTMLResponse(
+            LOGIN_HTML.replace("{ERROR}", '<div class="error">시도가 너무 많습니다. 10분 후 다시 시도해 주세요.</div>'),
+            status_code=429,
+        )
+
     expected = getattr(settings, "admin_password", "") or ""
     ok = bool(expected) and secrets.compare_digest(password, expected)
     if not ok:
+        record_login_failure("admin", key)
         return HTMLResponse(
             LOGIN_HTML.replace("{ERROR}", '<div class="error">비밀번호가 올바르지 않습니다.</div>'),
             status_code=401,
         )
+    record_login_success("admin", key)
     token = make_token(expected)
     response = RedirectResponse(url="/admin/", status_code=302)
     max_age = 30 * 24 * 3600 if remember == "1" else None

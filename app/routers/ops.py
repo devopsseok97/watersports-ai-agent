@@ -6,10 +6,16 @@ import secrets
 import time
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Cookie, Form, Header, HTTPException, status
+from fastapi import APIRouter, Cookie, Form, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.config import settings
+from app.services.ratelimit import (
+    client_key,
+    login_locked,
+    record_login_failure,
+    record_login_success,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -62,16 +68,26 @@ async def login_page(opsess: str | None = Cookie(default=None)):
 
 @router.post("/login")
 async def login_submit(
+    request: Request,
     password: str = Form(...),
     remember: str = Form(default=""),
 ):
+    key = client_key(request)
+    if login_locked("ops", key):
+        return HTMLResponse(
+            _LOGIN_HTML.replace("{ERROR}", '<div class="error">시도가 너무 많습니다. 10분 후 다시 시도해 주세요.</div>'),
+            status_code=429,
+        )
+
     pw = getattr(settings, "ops_password", "") or ""
     ok = bool(pw) and secrets.compare_digest(password, pw)
     if not ok:
+        record_login_failure("ops", key)
         return HTMLResponse(
             _LOGIN_HTML.replace("{ERROR}", '<div class="error">비밀번호가 올바르지 않습니다.</div>'),
             status_code=401,
         )
+    record_login_success("ops", key)
     token = _make_token(pw)
     resp = RedirectResponse(url="/ops/", status_code=302)
     max_age = 90 * 24 * 3600 if remember == "1" else None
