@@ -12,7 +12,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
-from app.services.db import get_supabase
+from app.services.db import get_supabase, select_all
 
 logger = logging.getLogger(__name__)
 
@@ -206,15 +206,9 @@ async def get_reservation_stats() -> dict:
     예약확정 = reservations 테이블의 입력 건(사장님이 직접 확정 입력한 것).
     수입 = 각 예약의 amount(실수령 금액) 합산.
     """
-    client = await get_supabase()
     today = today_str()
     ym = today[:7]  # YYYY-MM (이번 달)
-    res = (
-        await client.table("reservations")
-        .select("slot_date,people,amount,status")
-        .execute()
-    )
-    all_rows = res.data or []
+    all_rows = await select_all("reservations", "slot_date,people,amount,status")
 
     def amt(r):
         return _to_amount(r.get("amount"))

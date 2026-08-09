@@ -20,6 +20,34 @@ async def get_supabase():
     return _supabase
 
 
+SELECT_ALL_PAGE = 1000
+
+
+async def select_all(table: str, columns: str) -> list[dict]:
+    """테이블 전체를 페이지 단위로 끝까지 읽는다.
+
+    PostgREST는 응답 행 수 상한(Max rows)에 걸리면 오류 없이 잘라서 준다.
+    매출·노쇼율처럼 전 기간을 합산하는 집계에서 이걸 그냥 쓰면, 예약이
+    상한을 넘긴 순간부터 대시보드 숫자가 조용히 틀리기 시작한다.
+    """
+    client = await get_supabase()
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        res = (
+            await client.table(table)
+            .select(columns)
+            .order("id")
+            .range(offset, offset + SELECT_ALL_PAGE - 1)
+            .execute()
+        )
+        page = res.data or []
+        rows.extend(page)
+        if len(page) < SELECT_ALL_PAGE:
+            return rows
+        offset += len(page)
+
+
 async def save_conversation(
     user_id: str,
     user_message: str,

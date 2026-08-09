@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.routers.admin import require_admin
 from app.services.auth import verify_session
-from app.services.db import get_supabase
+from app.services.db import select_all
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,11 +26,10 @@ def _amt(v) -> int:
 @router.get("/api/analytics")
 async def api_analytics(_=Depends(require_admin)):
     try:
-        client = await get_supabase()
-        res = await client.table("reservations").select(
-            "slot_date,program,time_slot,people,platform,amount,payment_method,status"
-        ).execute()
-        rows = res.data or []
+        rows = await select_all(
+            "reservations",
+            "slot_date,program,time_slot,people,platform,amount,payment_method,status",
+        )
     except Exception as e:
         logger.error(f"analytics 조회 실패: {e}")
         return {}

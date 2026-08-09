@@ -1,6 +1,7 @@
 import pytest
 
 import app.services.availability as av
+import app.services.db as db
 
 
 class _FakeTable:
@@ -33,6 +34,9 @@ class _FakeTable:
     def limit(self, *a):
         return self
 
+    def range(self, *a):
+        return self
+
     async def execute(self):
         data = self.store.get("data", [{}])
 
@@ -60,6 +64,7 @@ def store(monkeypatch):
         return _FakeClient(store)
 
     monkeypatch.setattr(av, "get_supabase", fake_get_supabase)
+    monkeypatch.setattr(db, "get_supabase", fake_get_supabase)  # select_all이 쓰는 쪽
     return store
 
 
