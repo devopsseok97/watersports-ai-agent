@@ -24,6 +24,7 @@ NAVER_API = "https://api.commerce.naver.com/external"
 
 _token_cache: dict = {}
 _processed: set[str] = set()  # 처리된 productOrderId (메모리)
+_unconfigured_warned = False
 _last_ip_alert: float = 0  # IP 변경 알림 마지막 발송 시각
 
 
@@ -235,13 +236,20 @@ async def _query_orders(c: httpx.AsyncClient, headers: dict, ids: list[str]) -> 
 async def sync_naver_orders() -> int:
     """최근 15분 결제완료 주문 동기화. 신규 등록 건수 반환."""
     if not settings.naver_client_id:
+        global _unconfigured_warned
+        if not _unconfigured_warned:
+            logger.warning(
+                "네이버 커머스 API 미설정(NAVER_CLIENT_ID) — 스마트스토어 주문 자동 등록이 "
+                "동작하지 않습니다. 사장님이 모든 예약을 손으로 옮겨야 합니다."
+            )
+            _unconfigured_warned = True
         return 0
 
-    try:
-        tok = await _get_token()
-    except Exception as e:
-        logger.warning(f"네이버 토큰 발급 실패: {e}")
-        return 0
+    # 아래 실패들은 반드시 예외로 올린다. 삼키고 0을 반환하면 호출부의
+    # FailureAlarm이 매번 정상으로 집계해, 연동이 통째로 죽어 있어도
+    # 경고가 영원히 오지 않는다 (2026-08-10: 7주간 자동 등록 0건을
+    # 아무도 몰랐던 원인).
+    tok = await _get_token()
 
     headers = {"Authorization": f"Bearer {tok}"}
     since = (datetime.now(timezone.utc) - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -254,8 +262,9 @@ async def sync_naver_orders() -> int:
             params={"lastChangedFrom": since, "lastChangedType": "PAYED"},
         )
         if r.status_code != 200:
-            logger.warning(f"네이버 주문 목록 조회 실패: {r.status_code} {r.text[:300]}")
-            return 0
+            raise RuntimeError(
+                f"네이버 주문 목록 조회 실패: {r.status_code} {r.text[:300]}"
+            )
 
         raw = r.json().get("data", [])
         # API가 data를 dict로 반환하는 경우 대비 (lastChangedProductOrders 키 확인)
