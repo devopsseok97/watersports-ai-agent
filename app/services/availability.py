@@ -351,11 +351,16 @@ async def get_day_summary(date_str: str) -> list[dict]:
 
 # ────────────────────────────── 챗봇 주입 텍스트 ──────────────────────────────
 
-async def build_availability_text(days: int = 14) -> str:
-    """시스템 프롬프트에 주입할 잔여 좌석 요약.
+async def build_availability_text(days: int = 21) -> str:
+    """시스템 프롬프트에 주입할 '마감된 타임' 목록.
 
-    예약 건들을 슬롯별로 합산해 잔여/마감만 표시.
+    ★ 마감된 슬롯만 넣는다. 시스템 프롬프트가 이 블록을 "마감된 타임만 표시"로
+      설명하고 "여기 없으면 예약 가능"이라는 규칙으로 읽기 때문이다. 여유 있는
+      슬롯을 함께 넣으면 모델이 그것도 마감으로 해석해, 자리가 남았는데도
+      손님에게 "불가"라고 답한다.
     ★ 예약자 이름·플랫폼·메모는 절대 포함하지 않는다.
+    ★ days는 agent.build_calendar_text의 달력 길이(21일)와 같아야 한다. 짧으면
+      달력에는 있는데 마감 정보가 없는 날이 생겨 "예약 가능"으로 잘못 답한다.
     """
     start = today_str()
     end = (datetime.now(KST) + timedelta(days=days)).strftime("%Y-%m-%d")
@@ -365,30 +370,26 @@ async def build_availability_text(days: int = 14) -> str:
         logger.warning(f"예약현황 조회 실패: {e}")
         return "예약 현황을 일시적으로 확인할 수 없습니다. 정확한 자리는 전화로 확인해 주세요."
 
+    all_open = f"오늘({start}) 기준 전 종목·전 시간대 예약 가능합니다."
     if not rows:
-        return f"오늘({start}) 기준 입력된 예약이 없습니다. 전 종목·전 시간대 예약 가능합니다."
-
-    agg = aggregate(rows)
+        return all_open
 
     by_date: dict[str, list[str]] = {}
-    for (d, prog, slot), booked in agg.items():
+    for (d, prog, slot), booked in aggregate(rows).items():
         cap = CAPACITY.get(prog)
         if cap is None:
             continue  # 협의 종목은 정원 개념 없음 → 챗봇엔 안 넣음
-        if booked <= 0:
-            continue
-        rem = max(cap - booked, 0)
-        label = "마감" if rem <= 0 else f"{rem}자리 남음 ({booked}/{cap})"
-        slot_label = f"{prog} {slot}".strip()
-        by_date.setdefault(d, []).append(f"{slot_label}: {label}")
+        if booked < cap:
+            continue  # 자리가 남은 슬롯은 넣지 않는다 (docstring 참조)
+        by_date.setdefault(d, []).append(f"{prog} {slot}".strip() + ": 마감")
 
     if not by_date:
-        return f"오늘({start}) 기준 입력된 예약이 없습니다. 전 종목·전 시간대 예약 가능합니다."
+        return all_open
 
     lines = []
     for d, slots in sorted(by_date.items()):
         lines.append(f"- {d}\n  " + "\n  ".join(sorted(slots)))
     return (
-        "아래는 예약 인원이 합산된 슬롯의 잔여 좌석입니다. "
-        "여기 없는 종목·시간대는 전석 예약 가능합니다.\n" + "\n".join(lines)
+        "아래 목록은 '마감된 타임'만 담고 있습니다. "
+        "여기 없는 날짜·종목·시간대는 모두 예약 가능합니다.\n" + "\n".join(lines)
     )
