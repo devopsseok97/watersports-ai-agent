@@ -26,8 +26,11 @@ def client_key(request: Request) -> str:
 
     request.client.host는 레일웨이 엣지 프록시 IP라 모든 방문자가 한 값으로
     뭉친다. 프록시가 붙여주는 X-Forwarded-For의 첫 항목을 쓴다.
-    이 헤더는 위조 가능하므로, 이것만으로 방어를 끝내면 안 된다
-    (로그인은 MAX_LOGIN_FAILS_GLOBAL로 한 번 더 막는다).
+
+    2026-08-09 실측: 레일웨이 엣지가 이 헤더를 직접 세팅해서, 외부에서 값을
+    넣어 보내도 실제 접속 IP로 덮인다(다른 값을 넣은 두 요청이 같은 키로
+    집계됨). 다만 이건 우리가 통제하지 못하는 인프라 동작이라, 로그인은
+    MAX_LOGIN_FAILS_GLOBAL로 한 번 더 막아 둔다.
     """
     xff = request.headers.get("x-forwarded-for", "")
     if xff:
