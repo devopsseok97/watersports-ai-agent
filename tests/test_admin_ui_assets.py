@@ -20,6 +20,15 @@ def test_shared_admin_js_served():
     assert "toggleTheme" in response.text
 
 
+def test_shared_admin_theme_contract():
+    css = client.get("/static/admin/surf-admin.css")
+    js = client.get("/static/admin/surf-admin.js")
+    assert css.status_code == 200
+    assert js.status_code == 200
+    assert '[data-theme="dark"]' in css.text
+    assert "setAttribute('data-theme', 'dark')" in js.text or 'setAttribute("data-theme", "dark")' in js.text
+
+
 def test_landing_does_not_reference_admin_assets():
     response = client.get("/")
     assert response.status_code == 200
