@@ -93,6 +93,13 @@ def test_mobile_topbar_wraps_actions_below_brand():
     assert ".sf-topbar .sf-mobile-brand { width: 100%; }" in css
 
 
+def test_sidebar_nav_is_protected_from_legacy_inline_nav_rules():
+    css = client.get("/static/admin/surf-admin.css").text
+    assert ".sf-sidebar .sf-nav { padding: 0; overflow: visible; }" in css
+    assert ".sf-sidebar .sf-nav__link { background: transparent; border: 0; text-align: left; }" in css
+    assert ".sf-sidebar .sf-nav__link[aria-current=\"page\"] { background: rgba(255,255,255,.12); color: #fff; }" in css
+
+
 def test_admin_home_has_operations_console_regions(monkeypatch):
     response = client.get("/admin/", cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
