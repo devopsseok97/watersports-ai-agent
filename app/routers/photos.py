@@ -375,9 +375,9 @@ ADMIN_HTML = """<!DOCTYPE html>
   .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .thumb { position:relative; width:80px; height:80px; flex-shrink:0; }
   .thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; border:1px solid var(--line); }
-  .thumb .xbtn { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%;
+  .thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;
                  background:#ef4444; color:#fff; border:none; font-size:14px; font-weight:900;
-                 cursor:pointer; padding:0; line-height:22px; text-align:center; }
+                 cursor:pointer; padding:0; line-height:40px; text-align:center; }
   .thumb .xbtn:active { background:#dc2626; }
   @media (max-width:560px){
     main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }

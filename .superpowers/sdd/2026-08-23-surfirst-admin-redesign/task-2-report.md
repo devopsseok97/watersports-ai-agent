@@ -69,3 +69,56 @@ Result:
 - `app/routers/dashboard.py`
 - `static/admin/surf-admin.css`
 - `tests/test_admin_ui_assets.py`
+
+## Fix Round 1
+
+### Review Finding Addressed
+
+Blocked review item: minimum 40px touch targets were not consistently met on page-specific controls.
+
+Fixed:
+
+- `app/routers/availability.py`
+  - reservation row action buttons now keep `min-width:40px` and `min-height:40px`, including the mobile override
+- `app/routers/dashboard.py`
+  - calendar nav buttons now use `40x40`
+  - tab buttons now declare `min-width:40px` and `min-height:40px`
+- `app/routers/photos.py`
+  - photo thumbnail delete buttons now use `40x40` with matching `line-height:40px`
+- `tests/test_admin_ui_assets.py`
+  - added a static regression test that asserts the generated HTML/CSS strings retain those 40px floors on the known selectors
+
+### Command
+
+`/Users/gimhyeongseog/Desktop/watersports-agent/venv/bin/python -m pytest tests/test_admin_ui_assets.py tests/test_login_bruteforce.py -v`
+
+### Output
+
+```text
+collected 22 items
+
+tests/test_admin_ui_assets.py::test_shared_admin_css_served PASSED
+tests/test_admin_ui_assets.py::test_shared_admin_js_served PASSED
+tests/test_admin_ui_assets.py::test_shared_admin_theme_contract PASSED
+tests/test_admin_ui_assets.py::test_landing_does_not_reference_admin_assets PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_reference_shared_assets[/admin/] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_reference_shared_assets[/availability/admin] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_reference_shared_assets[/photos/admin] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_reference_shared_assets[/dashboard/] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_share_nav_labels[/admin/] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_share_nav_labels[/availability/admin] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_share_nav_labels[/photos/admin] PASSED
+tests/test_admin_ui_assets.py::test_authenticated_admin_pages_share_nav_labels[/dashboard/] PASSED
+tests/test_admin_ui_assets.py::test_login_page_uses_surfirst_console_copy PASSED
+tests/test_admin_ui_assets.py::test_touch_targets_keep_40px_minimums PASSED
+tests/test_login_bruteforce.py::test_repeated_wrong_password_gets_locked[/admin/login] PASSED
+tests/test_login_bruteforce.py::test_repeated_wrong_password_gets_locked[/ops/login] PASSED
+tests/test_login_bruteforce.py::test_lock_blocks_even_correct_password[/admin/login-correct-horse] PASSED
+tests/test_login_bruteforce.py::test_lock_blocks_even_correct_password[/ops/login-ops-secret] PASSED
+tests/test_login_bruteforce.py::test_success_clears_failure_count[/admin/login-correct-horse] PASSED
+tests/test_login_bruteforce.py::test_success_clears_failure_count[/ops/login-ops-secret] PASSED
+tests/test_login_bruteforce.py::test_admin_lock_does_not_lock_ops PASSED
+tests/test_login_bruteforce.py::test_ip_rotation_hits_global_cap PASSED
+
+22 passed, 10 warnings in 1.72s
+```

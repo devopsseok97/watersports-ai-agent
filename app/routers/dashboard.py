@@ -193,7 +193,7 @@ header{background:var(--hbg);backdrop-filter:saturate(180%) blur(12px);
 /* TABS */
 .tabs{display:flex;padding:0 12px;border-bottom:1px solid var(--line);overflow-x:auto;}
 .tab{background:none;border:none;border-bottom:3px solid transparent;
-     color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px;
+     color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px; min-width:40px; min-height:40px;
      cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;flex-shrink:0;}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent);}
 
@@ -246,7 +246,7 @@ tr:last-child td{border-bottom:none;}
           padding:16px;box-shadow:var(--shadow);}
 .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;}
 .cnbtn{background:var(--field);border:1px solid var(--line);color:var(--txt);
-       width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;
+       width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;
        display:flex;align-items:center;justify-content:center;}
 .ctitle{font-size:17px;font-weight:800;min-width:130px;text-align:center;}
 .cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}

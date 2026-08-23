@@ -239,7 +239,7 @@ ADMIN_HTML = """<!DOCTYPE html>
   .r-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; white-space:nowrap; }
   .r-amt .dep-amt  { font-size:12px; color:#10b981; font-weight:600; margin-top:2px; }
   .r-acts { flex-shrink:0; white-space:nowrap; text-align:right; }
-  .r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); }
+  .r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); min-width:40px; min-height:40px; }
   .r-acts button:active { transform:scale(1.2); }
   .nobadge  { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
@@ -294,7 +294,7 @@ ADMIN_HTML = """<!DOCTYPE html>
     .r-amt   { display:none; }
     .r-sub   { display:block; }
     .r-acts .del-btn { display:none; }
-    .r-acts button { font-size:21px; padding:4px 3px; min-width:34px; min-height:38px; }
+    .r-acts button { font-size:21px; padding:4px 3px; min-width:40px; min-height:40px; }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style><script src="/static/admin/surf-admin.js"></script></head>
