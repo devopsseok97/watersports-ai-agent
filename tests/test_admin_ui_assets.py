@@ -72,6 +72,10 @@ def test_login_page_uses_surfirst_console_copy():
 def test_touch_targets_keep_40px_minimums():
     assert ".r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
     assert ".r-acts button { font-size:21px; padding:4px 3px; min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
+    assert "min-width:40px; min-height:40px;" in admin.DASHBOARD_HTML
+    assert ".memobtn { background:var(--field); border:1px solid var(--line); color:var(--sub);" in admin.DASHBOARD_HTML
+    assert ".delrowbtn { background:transparent; border:none; color:var(--sub); font-size:16px;" in admin.DASHBOARD_HTML
+    assert ".turn .tbtn { background:var(--field); border:1px solid var(--line); color:var(--sub);" in admin.DASHBOARD_HTML
     assert ".ibtn{background:var(--field);border:1px solid var(--line);color:var(--txt);" in dashboard.DASHBOARD_HTML
     assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;" in dashboard.DASHBOARD_HTML
     assert ".rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);" in dashboard.DASHBOARD_HTML
@@ -81,6 +85,12 @@ def test_touch_targets_keep_40px_minimums():
     assert ".delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }" in photos.ADMIN_HTML
     assert ".thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;" in photos.ADMIN_HTML
     assert "cursor:pointer; padding:0; line-height:40px; text-align:center; }" in photos.ADMIN_HTML
+
+
+def test_mobile_topbar_wraps_actions_below_brand():
+    css = client.get("/static/admin/surf-admin.css").text
+    assert ".sf-topbar { flex-wrap: wrap; align-items: flex-start; }" in css
+    assert ".sf-topbar .sf-mobile-brand { width: 100%; }" in css
 
 
 def test_admin_home_has_operations_console_regions(monkeypatch):
@@ -153,9 +163,24 @@ def test_availability_admin_html_contains_list_badges_and_actions_contract():
         '<span class="sf-status sf-status--ok">예약</span>',
         '<span class="sf-status sf-status--pending">입금대기</span>',
         '<span class="sf-status sf-status--danger">노쇼</span>',
+        '<span class="sf-status sf-status--muted">취소</span>',
+        "const isCanceled = st==='취소' || st==='예약취소' || st==='취소됨';",
+        "else badge = `<span class=\"sf-status sf-status--muted\">${esc(st)}</span>`;",
         ">확정</button>",
     ]:
         assert marker in availability.ADMIN_HTML
+
+
+def test_availability_add_reservation_submits_and_resets_status():
+    assert "fd.append('status', $('f_status').value);" in availability.ADMIN_HTML
+    assert "$('f_status').value='예약';" in availability.ADMIN_HTML
+
+
+def test_admin_home_uses_data_attribute_for_user_id_actions():
+    assert "function attr(s){" in admin.DASHBOARD_HTML
+    assert "function openUserFromElement(el){" in admin.DASHBOARD_HTML
+    assert 'data-user-id="${attr(r.user_id)}"' in admin.DASHBOARD_HTML
+    assert "openUser('${esc(r.user_id)}')" not in admin.DASHBOARD_HTML
 
 
 def test_photos_page_has_delivery_regions(monkeypatch):

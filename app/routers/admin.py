@@ -360,10 +360,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .item .arrow { color:var(--sub); font-size:18px; }
   .item .head .spacer { margin-left:auto; }
   .memobtn { background:var(--field); border:1px solid var(--line); color:var(--sub);
-             border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; padding:5px 10px; }
+             border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; padding:5px 10px;
+             min-width:40px; min-height:40px; }
   .memobtn:active { color:var(--accent); }
   .delrowbtn { background:transparent; border:none; color:var(--sub); font-size:16px;
-               cursor:pointer; padding:4px 8px; border-radius:6px; transition:color .12s, background .12s; }
+               cursor:pointer; padding:4px 8px; border-radius:6px; transition:color .12s, background .12s;
+               min-width:40px; min-height:40px; }
   .delrowbtn:hover { color:#ef4444; background:rgba(239,68,68,.1); }
   .memo-view { margin-top:10px; padding:10px 12px; background:var(--warn-soft);
                border:1px solid var(--warn); border-radius:10px; font-size:15px;
@@ -407,7 +409,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .turn .tools { display:flex; gap:4px; margin-left:auto; }
   .turn .ts { display:flex; align-items:center; }
   .turn .tbtn { background:var(--field); border:1px solid var(--line); color:var(--sub);
-                border-radius:8px; font-size:15px; cursor:pointer; padding:4px 8px; }
+                border-radius:8px; font-size:15px; cursor:pointer; padding:4px 8px;
+                min-width:40px; min-height:40px; }
   .turn .tbtn:active { color:var(--accent); }
   .turn textarea { width:100%; background:var(--field); border:1px solid var(--line);
                    color:var(--txt); border-radius:10px; padding:10px 12px; font-size:15px;
@@ -613,6 +616,7 @@ function buildCharts(list){
 
 function fmt(ts){ if(!ts)return'-'; const d=new Date(ts); return d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function attr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function uid(s){ return s?esc(String(s).slice(0,8))+'…':'-'; }
 function won(n){ return (Number(n)||0).toLocaleString('ko-KR')+'원'; }
 function todayKey(){
@@ -686,9 +690,9 @@ async function loadAll(){
           <span class="tag">예약문의</span><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
           <span class="spacer"></span>
           <button class="memobtn" onclick="editMemo(${r.id})">📝 메모</button>
-          <span class="arrow clickable" style="cursor:pointer" onclick="openUser('${esc(r.user_id)}')">›</span>
+          <span class="arrow clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">›</span>
         </div>
-        <div class="q clickable" style="cursor:pointer" onclick="openUser('${esc(r.user_id)}')">${esc(r.user_message)}</div>
+        <div class="q clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">${esc(r.user_message)}</div>
         <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
       </div>`;
     }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';
@@ -697,7 +701,7 @@ async function loadAll(){
 
     const cv=document.getElementById('convos');
     cv.innerHTML=convos.length?convos.map(r=>`
-      <div class="item clickable" onclick="openUser('${esc(r.user_id)}')">
+      <div class="item clickable" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">
         <div class="head">
           <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
           <span class="spacer"></span>
@@ -718,6 +722,11 @@ async function openUser(userId){
   document.getElementById('m-body').innerHTML='<div class="empty">불러오는 중...</div>';
   document.getElementById('modal').classList.add('show');
   await renderUser();
+}
+
+function openUserFromElement(el){
+  const userId = el && el.dataset ? el.dataset.userId : '';
+  if(userId) openUser(userId);
 }
 
 async function renderUser(){
@@ -794,7 +803,7 @@ function isToday(ts){
 function convListHTML(rows){
   if(!rows.length) return '<div class="empty">대화가 없습니다.</div>';
   return rows.map(r=>`
-    <div class="item clickable" onclick="closeCard();openUser('${esc(r.user_id)}')">
+    <div class="item clickable" data-user-id="${attr(r.user_id)}" onclick="closeCard();openUserFromElement(this)">
       <div class="head">
         <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
         <span class="spacer"></span>
@@ -833,9 +842,9 @@ function openCard(type){
             <span class="tag">예약문의</span><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
             <span class="spacer"></span>
             <button class="memobtn" onclick="closeCard(); editMemo(${r.id})">📝 메모</button>
-            <span class="arrow clickable" style="cursor:pointer" onclick="closeCard(); openUser('${esc(r.user_id)}')">›</span>
+            <span class="arrow clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="closeCard(); openUserFromElement(this)">›</span>
           </div>
-          <div class="q clickable" style="cursor:pointer" onclick="closeCard(); openUser('${esc(r.user_id)}')">${esc(r.user_message)}</div>
+          <div class="q clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="closeCard(); openUserFromElement(this)">${esc(r.user_message)}</div>
           <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
         </div>`;
     }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';

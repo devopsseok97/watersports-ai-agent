@@ -191,6 +191,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 @media (max-width: 480px) {
   .sf-card-grid, .sf-form-grid { grid-template-columns: 1fr; }
+  .sf-topbar { flex-wrap: wrap; align-items: flex-start; }
+  .sf-topbar .sf-mobile-brand { width: 100%; }
   .sf-actions { width: 100%; }
   .sf-actions .sf-btn:not(.sf-icon-btn) { flex: 1; }
   .sf-page-title { font-size: 21px; }

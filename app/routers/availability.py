@@ -651,14 +651,17 @@ function renderList(rows){
     const st = (r.status||'예약');
     const isNo = st==='노쇼';
     const isPend = st==='입금대기';
+    const isCanceled = st==='취소' || st==='예약취소' || st==='취소됨';
     const amt = Number(r.amount)||0; if(st==='예약') sumAmt += amt;
     const dep = Number(r.deposit_amount)||0;
     const hasDeposit = dep > 0;
-    const rowCls = isNo ? 'tr-noshow' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : ''));
+    const rowCls = isNo ? 'tr-noshow' : (isCanceled ? 'tr-canceled' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : '')));
     let badge = '';
     if(isNo) badge = '<span class="sf-status sf-status--danger">노쇼</span>';
+    else if(isCanceled) badge = '<span class="sf-status sf-status--muted">취소</span>';
     else if(isPend) badge = '<span class="sf-status sf-status--pending">입금대기</span>';
-    else badge = '<span class="sf-status sf-status--ok">예약</span>';
+    else if(st==='예약') badge = '<span class="sf-status sf-status--ok">예약</span>';
+    else badge = `<span class="sf-status sf-status--muted">${esc(st)}</span>`;
     let acts = '';
     if(isNo){
       acts = `<button onclick="setStatus(${r.id},'예약')" title="복원">↩️</button>`;
@@ -694,6 +697,7 @@ async function addRes(){
   fd.append('people', $('f_people').value || '1');
   fd.append('platform', $('f_plat').value);
   fd.append('payment_method', $('f_pay').value);
+  fd.append('status', $('f_status').value);
   fd.append('deposit_amount', $('f_deposit').value || '0');
   fd.append('memo', $('f_memo').value.trim());
   fd.append('amount', $('f_amount').value || '0');
@@ -703,7 +707,7 @@ async function addRes(){
     alert('예약 추가 실패 ('+res.status+')\\n'+t.slice(0,500));
     return;
   }
-  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value=''; $('f_deposit').value=''; $('f_pay').value='계좌이체';
+  $('f_name').value=''; $('f_memo').value=''; $('f_people').value='2'; $('f_amount').value=''; $('f_deposit').value=''; $('f_pay').value='계좌이체'; $('f_status').value='예약';
   loadDay();
 }
 
