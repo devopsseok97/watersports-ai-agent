@@ -191,61 +191,23 @@ LOGIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#09090d">
 <title>서퍼스트 관리자 로그인</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{min-height:100svh;background:#09090d;
-     display:flex;align-items:center;justify-content:center;
-     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-     padding:24px;}
-.card{background:#111116;border:1px solid #1e2028;border-radius:22px;padding:40px 32px;
-      width:100%;max-width:380px;
-      box-shadow:0 0 0 1px rgba(129,140,248,.06),0 24px 64px rgba(0,0,0,.6);}
-.logo{text-align:center;margin-bottom:32px;}
-.logo .wave{font-size:48px;margin-bottom:10px;}
-.logo .brand{font-size:24px;font-weight:800;color:#e4e7ef;letter-spacing:-.5px;}
-.logo .sub{color:#6b7280;font-size:14px;margin-top:5px;}
-.field{margin-bottom:14px;}
-.field label{display:block;color:#6b7280;font-size:12px;font-weight:700;letter-spacing:.6px;
-             text-transform:uppercase;margin-bottom:8px;}
-.field input[type="password"]{width:100%;background:#0d0f14;border:1.5px solid #1e2028;color:#e4e7ef;
-  border-radius:12px;padding:14px 16px;font-size:16px;font-family:inherit;outline:none;
-  transition:border-color .2s,box-shadow .2s;}
-.field input[type="password"]:focus{border-color:#818cf8;box-shadow:0 0 0 3px rgba(129,140,248,.12);}
-.field input[type="password"]::placeholder{color:#3f4451;}
-.remember{display:flex;align-items:center;gap:10px;margin-bottom:22px;cursor:pointer;
-          color:#6b7280;font-size:14px;}
-.remember input[type="checkbox"]{width:18px;height:18px;accent-color:#818cf8;cursor:pointer;flex-shrink:0;}
-.error{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:#f87171;
-       border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:16px;}
-.btn{width:100%;background:#818cf8;color:#fff;border:none;border-radius:12px;
-     padding:15px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:-.2px;
-     transition:background .15s,transform .1s,box-shadow .15s;
-     box-shadow:0 4px 16px rgba(129,140,248,.3);}
-.btn:hover{background:#6366f1;box-shadow:0 4px 20px rgba(129,140,248,.45);}
-.btn:active{transform:scale(.98);background:#4f46e5;}
-</style>
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 </head>
-<body>
-<div class="card">
-  <div class="logo">
-    <div class="wave">🏄</div>
-    <div class="brand">서퍼스트</div>
-    <div class="sub">관리자 대시보드</div>
+<body class="sf-login">
+<main class="sf-login-card">
+  <div class="sf-login-brand">
+    <div class="sf-brand" aria-label="서퍼스트 운영 콘솔">서퍼스트<small>운영 콘솔</small></div>
   </div>
   {ERROR}
-  <form method="post" action="/admin/login">
-    <div class="field">
+  <form method="post" action="/admin/login" class="sf-login-form">
+    <div class="sf-field">
       <label>비밀번호</label>
-      <input type="password" name="password" placeholder="비밀번호를 입력하세요"
-             autofocus autocomplete="current-password">
+      <input type="password" name="password" placeholder="비밀번호를 입력하세요" autofocus autocomplete="current-password">
     </div>
-    <label class="remember">
-      <input type="checkbox" name="remember" value="1">
-      자동 로그인 (30일간 유지)
-    </label>
-    <button type="submit" class="btn">로그인</button>
+    <label class="sf-check"><input type="checkbox" name="remember" value="1"> 자동 로그인 30일 유지</label>
+    <button type="submit" class="sf-btn sf-btn--primary">로그인</button>
   </form>
-</div>
+</main>
 </body>
 </html>"""
 
@@ -261,6 +223,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>서퍼스트 관리자 · 홈</title>
 <style>
   :root {
@@ -397,10 +360,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .item .arrow { color:var(--sub); font-size:18px; }
   .item .head .spacer { margin-left:auto; }
   .memobtn { background:var(--field); border:1px solid var(--line); color:var(--sub);
-             border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; padding:5px 10px; }
+             border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; padding:5px 10px;
+             min-width:40px; min-height:40px; }
   .memobtn:active { color:var(--accent); }
   .delrowbtn { background:transparent; border:none; color:var(--sub); font-size:16px;
-               cursor:pointer; padding:4px 8px; border-radius:6px; transition:color .12s, background .12s; }
+               cursor:pointer; padding:4px 8px; border-radius:6px; transition:color .12s, background .12s;
+               min-width:40px; min-height:40px; }
   .delrowbtn:hover { color:#ef4444; background:rgba(239,68,68,.1); }
   .memo-view { margin-top:10px; padding:10px 12px; background:var(--warn-soft);
                border:1px solid var(--warn); border-radius:10px; font-size:15px;
@@ -444,7 +409,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   .turn .tools { display:flex; gap:4px; margin-left:auto; }
   .turn .ts { display:flex; align-items:center; }
   .turn .tbtn { background:var(--field); border:1px solid var(--line); color:var(--sub);
-                border-radius:8px; font-size:15px; cursor:pointer; padding:4px 8px; }
+                border-radius:8px; font-size:15px; cursor:pointer; padding:4px 8px;
+                min-width:40px; min-height:40px; }
   .turn .tbtn:active { color:var(--accent); }
   .turn textarea { width:100%; background:var(--field); border:1px solid var(--line);
                    color:var(--txt); border-radius:10px; padding:10px 12px; font-size:15px;
@@ -460,71 +426,85 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/admin/surf-admin.js"></script>
 </head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">🏄 서퍼스트<span>관리자</span></div>
-    <div class="htools">
-      <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
-      <button class="refresh" onclick="loadAll()">새로고침</button>
-      <a href="/admin/logout" class="logoutbtn">로그아웃</a>
-    </div>
-  </div>
-  <nav>
-    <a href="/admin/" class="active">🏠 홈</a>
-    <a href="/availability/admin">📅 예약</a>
-    <a href="/photos/admin">📸 사진</a>
-    <a href="/dashboard/">📊 분석</a>
-  </nav>
-</header>
-<main>
-  <div class="cards">
-    <div class="stat clickable" onclick="openCard('total')">
-      <div class="label">전체 문의</div><div class="value" id="s-total">-</div>
-      <div class="sublabel">눌러서 전체 보기 ›</div>
-    </div>
-    <div class="stat accent clickable" onclick="openCard('today')">
-      <div class="label">오늘 문의</div><div class="value" id="s-today">-</div>
-      <div class="sublabel">눌러서 오늘 보기 ›</div>
-    </div>
-    <div class="stat green clickable" onclick="openCard('confirmed')">
-      <div class="label">예약 확정 고객</div><div class="value" id="s-confirmed">-</div>
-      <div class="sublabel" id="s-confirmed-sub">눌러서 명단 보기 ›</div>
-    </div>
-    <div class="stat warn clickable" onclick="openCard('revenue')">
-      <div class="label">수입 (이번 달)</div><div class="value money" id="s-revenue">-</div>
-      <div class="sublabel">눌러서 수입 보기 ›</div>
-    </div>
-    <div class="stat amber clickable" onclick="openCard('pending')">
-      <div class="label">입금대기</div><div class="value" id="s-pending">-</div>
-      <div class="sublabel" id="s-pending-sub">눌러서 대기 보기 ›</div>
-    </div>
-  </div>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/" aria-current="page">홈</a>
+      <a class="sf-nav__link" href="/availability/admin">예약</a>
+      <a class="sf-nav__link" href="/photos/admin">사진</a>
+      <a class="sf-nav__link" href="/dashboard/">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <button class="sf-btn sf-btn--ghost" onclick="loadAll()" type="button">새로고침</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
+      <div class="sf-page-head">
+        <div>
+          <div class="sf-eyebrow">오늘 운영</div>
+          <h1 class="sf-page-title">서퍼스트 현장 상태</h1>
+          <p class="sf-page-sub" id="today-label">오늘 예약과 문의를 확인하세요.</p>
+        </div>
+        <div class="sf-actions">
+          <a class="sf-btn sf-btn--primary" href="/availability/admin">예약 추가</a>
+          <button class="sf-btn sf-btn--ghost" onclick="loadAll()" type="button">새로고침</button>
+        </div>
+      </div>
 
-  <h2>📊 수입 분석</h2>
-  <div class="kpirow">
-    <div class="kpi"><div class="k">이번 달 수입</div><div class="v" id="kpi-month">-</div></div>
-    <div class="kpi"><div class="k">전달 대비</div><div class="v" id="kpi-diff">-</div></div>
-    <div class="kpi"><div class="k">1인 평균 단가</div><div class="v" id="kpi-avg">-</div></div>
-  </div>
-  <div class="chartrow">
-    <div class="chartbox">
-      <div class="clabel">월별 수입 추이 (최근 6개월, 만원)</div>
-      <canvas id="monthChart"></canvas>
-    </div>
-    <div class="chartbox">
-      <div class="clabel">종목별 수입 비율</div>
-      <canvas id="progChart"></canvas>
-    </div>
-  </div>
+      <div class="sf-card-grid ops-metrics">
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('today-reservations')">
+          <div class="sf-metric__label">오늘 방문</div>
+          <div class="sf-metric__value" id="s-today-ppl">-</div>
+          <div class="sf-metric__note" id="s-today-rev">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('revenue')">
+          <div class="sf-metric__label">이번 달 수입</div>
+          <div class="sf-metric__value money" id="s-revenue">-</div>
+          <div class="sf-metric__note" id="s-month-ppl">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('pending')">
+          <div class="sf-metric__label">입금대기</div>
+          <div class="sf-metric__value" id="s-pending">-</div>
+          <div class="sf-metric__note" id="s-pending-sub">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('intents')">
+          <div class="sf-metric__label">예약문의</div>
+          <div class="sf-metric__value" id="s-intents">-</div>
+          <div class="sf-metric__note">최근 의향 고객</div>
+        </button>
+      </div>
 
-  <h2>🔔 예약 의향 고객</h2>
-  <div id="intents"><div class="empty">불러오는 중...</div></div>
-
-  <h2>💬 최근 대화 기록</h2>
-  <div id="convos"><div class="empty">불러오는 중...</div></div>
-</main>
+      <div class="ops-layout">
+        <section class="sf-panel">
+          <h2 class="sf-section-title">처리할 일</h2>
+          <div id="ops-alerts" class="ops-alerts"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">오늘 예약 타임라인</h2>
+          <div id="today-timeline" class="timeline-list"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">예약 의향 고객</h2>
+          <div id="intents"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">최근 대화</h2>
+          <div id="convos"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
 
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeUser()">
   <div class="modal">
@@ -550,32 +530,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </div>
 
 <script>
-function applyTheme(t){
-  if(t==='dark'){
-    document.documentElement.setAttribute('data-theme','dark');
-    document.getElementById('themebtn').textContent='☀️';
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-    document.getElementById('themebtn').textContent='🌙';
-  }
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
-  const next = cur==='dark'?'light':'dark';
-  try{ localStorage.setItem('dash_theme', next); }catch(e){}
-  applyTheme(next);
-  if(window._resList) buildCharts(window._resList);
-}
-(function(){
-  let t='light';
-  try{ t=localStorage.getItem('dash_theme')||'light'; }catch(e){}
-  applyTheme(t);
-})();
-
 /* ===== 차트 ===== */
 let _mChart=null, _pChart=null;
 
 function buildCharts(list){
+  const monthCanvas=document.getElementById('monthChart');
+  const progCanvas=document.getElementById('progChart');
+  if(!monthCanvas || !progCanvas || typeof Chart==='undefined') return;
   const ok=(list||[]).filter(r=>(r.status||'예약')==='예약');
   const now=new Date();
   const months=[];
@@ -614,9 +575,8 @@ function buildCharts(list){
     ?['#818cf8','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa','#fb923c','#94a3b8']
     :['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#f97316','#64748b'];
 
-  if(typeof Chart==='undefined') return;
   if(_mChart) _mChart.destroy();
-  _mChart=new Chart(document.getElementById('monthChart'),{
+  _mChart=new Chart(monthCanvas,{
     type:'bar',
     data:{
       labels:months.map(m=>m.slice(5)+'월'),
@@ -637,7 +597,7 @@ function buildCharts(list){
   });
 
   if(_pChart) _pChart.destroy();
-  _pChart=pLabels.length?new Chart(document.getElementById('progChart'),{
+  _pChart=pLabels.length?new Chart(progCanvas,{
     type:'doughnut',
     data:{
       labels:pLabels,
@@ -656,31 +616,70 @@ function buildCharts(list){
 
 function fmt(ts){ if(!ts)return'-'; const d=new Date(ts); return d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function attr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function uid(s){ return s?esc(String(s).slice(0,8))+'…':'-'; }
 function won(n){ return (Number(n)||0).toLocaleString('ko-KR')+'원'; }
+function todayKey(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const out={};
+  parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
+  return (out.year||'')+'-'+(out.month||'')+'-'+(out.day||'');
+}
+function timelineStatusClass(status){
+  if(status==='예약') return 'sf-status--ok';
+  if(status==='입금대기') return 'sf-status--pending';
+  if(status==='노쇼') return 'sf-status--danger';
+  if(status==='취소'||status==='예약취소'||status==='취소됨') return 'sf-status--muted';
+  return 'sf-status--muted';
+}
+function todayReservations(list){
+  const today=todayKey();
+  return (list||[]).filter(r=>r.slot_date===today).sort((a,b)=>String(a.time_slot||'').localeCompare(String(b.time_slot||'')));
+}
 
 async function loadAll(){
   try {
-    const [stats,intents,convos,resStats,resList]=await Promise.all([
+    const [stats,rawIntents,rawConvos,resStats,rawResList]=await Promise.all([
       fetch('api/stats').then(r=>r.json()),
       fetch('api/intents').then(r=>r.json()),
       fetch('api/conversations').then(r=>r.json()),
       fetch('api/reservation-stats').then(r=>r.json()),
       fetch('api/reservations').then(r=>r.json()),
     ]);
+    const intents=Array.isArray(rawIntents)?rawIntents:[];
+    const convos=Array.isArray(rawConvos)?rawConvos:[];
+    const resList=Array.isArray(rawResList)?rawResList:[];
     window._convosAll=convos||[];
+    window._intentsAll=intents||[];
     window._resStats=resStats||{};
     window._resList=resList||[];
 
     buildCharts(window._resList);
 
-    document.getElementById('s-total').textContent=stats.total_conversations??0;
-    document.getElementById('s-today').textContent=stats.today_conversations??0;
-    document.getElementById('s-confirmed').textContent=(resStats.total_reservations??0)+'건';
-    document.getElementById('s-confirmed-sub').textContent='누적 '+(resStats.total_people??0)+'명 · 눌러서 명단 ›';
-    document.getElementById('s-revenue').textContent=won(resStats.month_revenue);
+    document.getElementById('today-label').textContent=SurfAdmin.todayLabel()+' 기준';
+    document.getElementById('s-today-ppl').textContent=(resStats.today_people??0)+'명';
+    document.getElementById('s-today-rev').textContent=SurfAdmin.won(resStats.today_revenue);
+    document.getElementById('s-revenue').textContent=SurfAdmin.won(resStats.month_revenue);
+    document.getElementById('s-month-ppl').textContent='이번 달 '+(resStats.month_people??0)+'명';
     document.getElementById('s-pending').textContent=(resStats.pending_total??0)+'건';
-    document.getElementById('s-pending-sub').textContent=(resStats.pending_people??0)+'명 · '+won(resStats.pending_amount)+' 대기 ›';
+    document.getElementById('s-pending-sub').textContent=(resStats.pending_people??0)+'명 · '+SurfAdmin.won(resStats.pending_amount);
+    document.getElementById('s-intents').textContent=(intents||[]).length+'건';
+
+    const alerts=[];
+    if((resStats.pending_total??0)>0) alerts.push(`<a class="ops-alert ops-alert--pending" href="/availability/admin"><b>입금대기 ${resStats.pending_total}건</b><span>${SurfAdmin.won(resStats.pending_amount)} 확인 필요</span></a>`);
+    if((intents||[]).length>0) alerts.push(`<button class="ops-alert" type="button" onclick="openCard('intents')"><b>예약문의 ${intents.length}건</b><span>최근 문의를 확인하세요</span></button>`);
+    document.getElementById('ops-alerts').innerHTML=alerts.length?alerts.join(''):'<div class="sf-empty">지금 처리할 항목이 없습니다.</div>';
+
+    const todayRows=todayReservations(resList);
+    document.getElementById('today-timeline').innerHTML=todayRows.length?todayRows.map(r=>{
+      const status=r.status||'예약';
+      const cls=timelineStatusClass(status);
+      return `<div class="timeline-row">
+        <div class="timeline-time">${SurfAdmin.esc(r.time_slot||'-')}</div>
+        <div class="timeline-main"><b>${SurfAdmin.esc(r.customer_name||'(이름없음)')}</b><span>${SurfAdmin.esc(r.program||'기타')} · ${Number(r.people)||0}명</span></div>
+        <span class="sf-status ${cls}">${SurfAdmin.esc(status)}</span>
+      </div>`;
+    }).join(''):'<div class="sf-empty">오늘 예약이 없습니다.</div>';
 
     const it=document.getElementById('intents');
     it.innerHTML=intents.length?intents.map(r=>{
@@ -691,9 +690,9 @@ async function loadAll(){
           <span class="tag">예약문의</span><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
           <span class="spacer"></span>
           <button class="memobtn" onclick="editMemo(${r.id})">📝 메모</button>
-          <span class="arrow clickable" style="cursor:pointer" onclick="openUser('${esc(r.user_id)}')">›</span>
+          <span class="arrow clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">›</span>
         </div>
-        <div class="q clickable" style="cursor:pointer" onclick="openUser('${esc(r.user_id)}')">${esc(r.user_message)}</div>
+        <div class="q clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">${esc(r.user_message)}</div>
         <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
       </div>`;
     }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';
@@ -702,7 +701,7 @@ async function loadAll(){
 
     const cv=document.getElementById('convos');
     cv.innerHTML=convos.length?convos.map(r=>`
-      <div class="item clickable" onclick="openUser('${esc(r.user_id)}')">
+      <div class="item clickable" data-user-id="${attr(r.user_id)}" onclick="openUserFromElement(this)">
         <div class="head">
           <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
           <span class="spacer"></span>
@@ -723,6 +722,11 @@ async function openUser(userId){
   document.getElementById('m-body').innerHTML='<div class="empty">불러오는 중...</div>';
   document.getElementById('modal').classList.add('show');
   await renderUser();
+}
+
+function openUserFromElement(el){
+  const userId = el && el.dataset ? el.dataset.userId : '';
+  if(userId) openUser(userId);
 }
 
 async function renderUser(){
@@ -799,7 +803,7 @@ function isToday(ts){
 function convListHTML(rows){
   if(!rows.length) return '<div class="empty">대화가 없습니다.</div>';
   return rows.map(r=>`
-    <div class="item clickable" onclick="closeCard();openUser('${esc(r.user_id)}')">
+    <div class="item clickable" data-user-id="${attr(r.user_id)}" onclick="closeCard();openUserFromElement(this)">
       <div class="head">
         <span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
         <span class="spacer"></span>
@@ -825,9 +829,36 @@ function openCard(type){
   const title=document.getElementById('cm-title');
   const body=document.getElementById('cm-body');
   const convos=window._convosAll||[];
+  const intents=window._intentsAll||[];
   const rs=window._resStats||{};
   const list=window._resList||[];
-  if(type==='total'){
+  if(type==='intents'){
+    title.textContent='🔔 예약 의향 고객 ('+intents.length+'건)';
+    body.innerHTML=intents.length?intents.map(r=>{
+      const memo=r.admin_memo||'';
+      return `
+        <div class="item" id="modal-intent-${r.id}">
+          <div class="head">
+            <span class="tag">예약문의</span><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
+            <span class="spacer"></span>
+            <button class="memobtn" onclick="closeCard(); editMemo(${r.id})">📝 메모</button>
+            <span class="arrow clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="closeCard(); openUserFromElement(this)">›</span>
+          </div>
+          <div class="q clickable" style="cursor:pointer" data-user-id="${attr(r.user_id)}" onclick="closeCard(); openUserFromElement(this)">${esc(r.user_message)}</div>
+          <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
+        </div>`;
+    }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';
+  } else if(type==='today-reservations'){
+    const todayRows=todayReservations(list);
+    title.textContent='📅 오늘 예약';
+    body.innerHTML=`
+      <div class="revbox">
+        <div class="b"><div class="k">예약 건수</div><div class="v">${rs.today_reservations||0}건</div></div>
+        <div class="b"><div class="k">방문 인원</div><div class="v">${rs.today_people||0}명</div></div>
+        <div class="b hi"><div class="k">예상 매출</div><div class="v">${won(rs.today_revenue)}</div></div>
+      </div>
+      `+(todayRows.length?todayRows.map(resRowHTML).join(''):'<div class="empty">오늘 예약이 없습니다.</div>');
+  } else if(type==='total'){
     title.textContent='💬 전체 문의 ('+convos.length+'건)';
     body.innerHTML=convListHTML(convos);
   } else if(type==='today'){
@@ -896,6 +927,12 @@ async function saveMemo(id){
 
 loadAll();
 setInterval(loadAll,30000);
+</script>
+<script>
+SurfAdmin.initTheme('themebtn');
+document.getElementById('themebtn').addEventListener('click', function(){
+  if(window._resList) buildCharts(window._resList);
+});
 </script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body>

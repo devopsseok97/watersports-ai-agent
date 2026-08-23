@@ -318,6 +318,7 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>서퍼스트 관리자 · 사진</title>
 <style>
   :root {
@@ -369,14 +370,14 @@ ADMIN_HTML = """<!DOCTYPE html>
   .empty { color:var(--sub); padding:28px; text-align:center; font-size:16px; background:var(--card); border:1px dashed var(--line); border-radius:14px; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .hint { color:var(--sub); font-size:14px; margin:12px 0 0; line-height:1.6; }
-  .delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; }
+  .delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }
   .delbtn:active { background:#dc2626; }
   .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .thumb { position:relative; width:80px; height:80px; flex-shrink:0; }
   .thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; border:1px solid var(--line); }
-  .thumb .xbtn { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%;
+  .thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;
                  background:#ef4444; color:#fff; border:none; font-size:14px; font-weight:900;
-                 cursor:pointer; padding:0; line-height:22px; text-align:center; }
+                 cursor:pointer; padding:0; line-height:40px; text-align:center; }
   .thumb .xbtn:active { background:#dc2626; }
   @media (max-width:560px){
     main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
@@ -385,48 +386,53 @@ ADMIN_HTML = """<!DOCTYPE html>
     .delbtn { min-height:44px; }
     button { min-height:44px; }
   }
-</style></head>
+</style><script src="/static/admin/surf-admin.js"></script></head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">🏄 서퍼스트<span>관리자</span></div>
-    <div class="htools">
-      <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
-      <a href="/admin/logout" class="logoutbtn">로그아웃</a>
-    </div>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/">홈</a>
+      <a class="sf-nav__link" href="/availability/admin">예약</a>
+      <a class="sf-nav__link" href="/photos/admin" aria-current="page">사진</a>
+      <a class="sf-nav__link" href="/dashboard/">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
+      <div id="photo-delivery">
+        <div class="sf-page-head">
+          <div>
+            <div class="sf-eyebrow">사진 전달</div>
+            <h1 class="sf-page-title">현장 앨범</h1>
+            <p class="sf-page-sub">앨범을 만들고 QR을 손님에게 보여주세요.</p>
+          </div>
+        </div>
+        <section class="sf-panel album-create-panel" id="album-create-panel">
+          <div class="sf-form-grid">
+            <div class="sf-field sf-field--full">
+              <label for="memo">앨범 메모</label>
+              <input id="memo" placeholder="예: 8월 23일 오후 강습">
+            </div>
+            <button class="sf-btn sf-btn--primary" onclick="createAlbum()" type="button">새 앨범 만들기</button>
+          </div>
+        </section>
+        <section class="album-list" id="list"><div class="sf-empty">불러오는 중...</div></section>
+      </div>
+    </main>
   </div>
-  <nav>
-    <a href="/admin/">🏠 홈</a>
-    <a href="/availability/admin">📅 예약</a>
-    <a href="/photos/admin" class="active">📸 사진</a>
-  </nav>
-</header>
-<main>
-  <div class="new">
-    <div class="row">
-      <input id="memo" placeholder="메모 (예: 6/4 오전 데패강 김OO님)">
-      <button onclick="createAlbum()">+ 새 앨범 만들기</button>
-    </div>
-    <p class="hint">앨범을 만들면 QR이 나와요. 손님에게 QR을 보여주고 스캔하게 하면 끝.<br>사진은 아래 박스에 끌어다 놓으면 올라가요.</p>
-  </div>
-  <div id="list"><div class="empty">불러오는 중...</div></div>
-</main>
+</div>
 <script>
 const base = location.origin;
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmt(ts){ if(!ts) return '-'; return new Date(ts).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-
-function applyTheme(t){
-  if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); document.getElementById('themebtn').textContent='☀️'; }
-  else { document.documentElement.removeAttribute('data-theme'); document.getElementById('themebtn').textContent='🌙'; }
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
-  const next = cur==='dark'?'light':'dark';
-  try{ localStorage.setItem('dash_theme', next); }catch(e){}
-  applyTheme(next);
-}
-(function(){ let t='light'; try{ t=localStorage.getItem('dash_theme')||'light'; }catch(e){} applyTheme(t); })();
 
 async function createAlbum(){
   const memo = document.getElementById('memo').value;
@@ -439,22 +445,25 @@ async function createAlbum(){
 async function load(){
   const albums = await fetch('api/albums').then(r=>r.json());
   const el = document.getElementById('list');
-  if(!albums.length){ el.innerHTML='<div class="empty">아직 앨범이 없어요. 위에서 새로 만들어 보세요.</div>'; return; }
+  if(!albums.length){ el.innerHTML='<div class="sf-empty">아직 앨범이 없어요. 위에서 새로 만들어 보세요.</div>'; return; }
   el.innerHTML = albums.map(a=>`
-    <div class="album ${a.expired?'expired':''}" id="album-${a.code}">
-      <img class="qr" src="qr/${a.code}.png">
-      <div class="info">
-        <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;">
-          <div class="code">${esc(a.code)}</div>
-          <button class="delbtn" onclick="deleteAlbum('${a.code}')">앨범 삭제</button>
+    <article class="album-card ${a.expired?'is-expired':''}" id="album-${a.code}">
+      <img class="album-card__qr" src="qr/${a.code}.png" alt="${esc(a.code)} QR">
+      <div class="album-card__body">
+        <div class="album-card__head">
+          <div>
+            <div class="album-code">${esc(a.code)}</div>
+            <div class="album-meta">${esc(a.memo)||'(메모 없음)'} · 사진 ${a.photo_count||0}장 · ${a.expired?'만료됨':'~'+fmt(a.expires_at)}</div>
+          </div>
+          <button class="sf-btn sf-btn--danger delbtn" onclick="deleteAlbum('${a.code}')" type="button">삭제</button>
         </div>
-        <div class="meta">${esc(a.memo)||'(메모 없음)'} · 사진 ${a.photo_count||0}장 · ${a.expired?'만료됨':'~'+fmt(a.expires_at)}</div>
-        <a class="link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
-        <div id="thumbs-${a.code}"></div>
-        <div class="drop" data-code="${a.code}">여기에 사진을 끌어다 놓거나 클릭해서 선택</div>
+        <a class="album-link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
+        <div class="album-upload-status" id="upload-status-${a.code}" role="status" aria-live="polite"></div>
+        <div class="drop" data-code="${a.code}">사진을 끌어다 놓거나 클릭해서 선택</div>
         <input type="file" multiple accept="image/*" style="display:none" data-code="${a.code}">
+        <div id="thumbs-${a.code}"></div>
       </div>
-    </div>`).join('');
+    </article>`).join('');
   bindDrops();
   albums.forEach(a => loadThumbs(a.code));
 }
@@ -499,11 +508,21 @@ async function uploadFiles(code, files){
   const fd = new FormData();
   for(const f of files) fd.append('files', f);
   const drop = document.querySelector(`.drop[data-code="${code}"]`);
-  drop.textContent = '업로드 중...';
-  await fetch(`api/albums/${code}/upload`, {method:'POST', body:fd});
-  load();
+  const status = document.getElementById(`upload-status-${code}`);
+  if(drop) drop.textContent = '업로드 중...';
+  if(status) status.textContent = files.length + '장 업로드 중...';
+  try{
+    const res = await fetch(`api/albums/${code}/upload`, {method:'POST', body:fd});
+    if(!res.ok) throw new Error('upload failed');
+    if(status) status.textContent = '업로드 완료';
+    load();
+  }catch(_err){
+    if(drop) drop.textContent = '사진을 끌어다 놓거나 클릭해서 선택';
+    if(status) status.textContent = '업로드 실패. 다시 시도해 주세요.';
+  }
 }
 load();
 </script>
+<script>SurfAdmin.initTheme('themebtn');</script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body></html>"""

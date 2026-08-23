@@ -144,8 +144,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>서퍼스트 · 분석</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/admin/surf-admin.js"></script>
 <style>
 :root {
   --bg:#f6f8fa; --card:#fff; --line:#d0d7de; --txt:#1f2328; --sub:#57606a;
@@ -181,7 +183,7 @@ header{background:var(--hbg);backdrop-filter:saturate(180%) blur(12px);
 .brand span{color:var(--sub);font-size:13px;font-weight:600;margin-left:6px;}
 .htools{display:flex;gap:6px;align-items:center;}
 .ibtn{background:var(--field);border:1px solid var(--line);color:var(--txt);
-      width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:17px;
+      width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;
       display:flex;align-items:center;justify-content:center;}
 .abtn{background:var(--field);border:1px solid var(--line);color:var(--sub);
       height:38px;border-radius:10px;font-size:13px;font-weight:700;padding:0 12px;
@@ -191,7 +193,7 @@ header{background:var(--hbg);backdrop-filter:saturate(180%) blur(12px);
 /* TABS */
 .tabs{display:flex;padding:0 12px;border-bottom:1px solid var(--line);overflow-x:auto;}
 .tab{background:none;border:none;border-bottom:3px solid transparent;
-     color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px;
+     color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px; min-width:40px; min-height:40px;
      cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;flex-shrink:0;}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent);}
 
@@ -220,7 +222,7 @@ main{padding:14px;max-width:1100px;margin:0 auto;
     display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
 .rbtns{display:flex;gap:4px;}
 .rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);
-      border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;cursor:pointer;}
+      border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;min-width:40px;min-height:40px;cursor:pointer;}
 .rbtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
 
 /* TABLE */
@@ -244,7 +246,7 @@ tr:last-child td{border-bottom:none;}
           padding:16px;box-shadow:var(--shadow);}
 .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;}
 .cnbtn{background:var(--field);border:1px solid var(--line);color:var(--txt);
-       width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:18px;
+       width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;
        display:flex;align-items:center;justify-content:center;}
 .ctitle{font-size:17px;font-weight:800;min-width:130px;text-align:center;}
 .cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
@@ -286,22 +288,42 @@ tr:last-child td{border-bottom:none;}
 </style>
 </head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">📊 분석<span>서퍼스트</span></div>
-    <div class="htools">
-      <button class="ibtn" id="tbtn" onclick="toggleTheme()">🌙</button>
-      <button class="ibtn" onclick="reload()" title="새로고침">↻</button>
-      <a href="/admin/" class="abtn">← 관리자</a>
-    </div>
-  </div>
-  <div class="tabs">
-    <button class="tab on" data-tab="ov" onclick="sw('ov')">📈 개요</button>
-    <button class="tab" data-tab="ch" onclick="sw('ch')">🏪 채널·종목</button>
-    <button class="tab" data-tab="cal" onclick="sw('cal')">📅 캘린더</button>
-  </div>
-</header>
-<main>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/">홈</a>
+      <a class="sf-nav__link" href="/availability/admin">예약</a>
+      <a class="sf-nav__link" href="/photos/admin">사진</a>
+      <a class="sf-nav__link" href="/dashboard/" aria-current="page">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <button class="sf-btn sf-btn--ghost sf-icon-btn" onclick="reload()" title="새로고침" type="button">↻</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
+      <div id="analytics-report">
+        <div class="sf-page-head">
+          <div>
+            <div class="sf-eyebrow">분석</div>
+            <h1 class="sf-page-title">영업 리포트</h1>
+            <p class="sf-page-sub">매출, 채널, 종목, 요일별 흐름을 확인합니다.</p>
+          </div>
+          <div class="sf-actions">
+            <button class="sf-btn sf-btn--ghost" onclick="reload()" type="button">새로고침</button>
+          </div>
+        </div>
+        <div class="report-tabs">
+          <button class="report-tab on" data-tab="ov" onclick="sw('ov')" type="button">개요</button>
+          <button class="report-tab" data-tab="ch" onclick="sw('ch')" type="button">채널·종목</button>
+          <button class="report-tab" data-tab="cal" onclick="sw('cal')" type="button">캘린더</button>
+        </div>
 
   <!-- ===== TAB: 개요 ===== -->
   <div id="p-ov">
@@ -361,8 +383,11 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
   </div>
+      </div>
 
 </main>
+  </div>
+</div>
 <script>
 /* ===== UTILS ===== */
 const $ = id => document.getElementById(id);
@@ -378,28 +403,10 @@ function COLORS() {
     : ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#f97316','#64748b'];
 }
 
-/* ===== THEME ===== */
-function applyTheme(t) {
-  if (t === 'dark') { document.documentElement.setAttribute('data-theme','dark'); $('tbtn').textContent='☀️'; }
-  else { document.documentElement.removeAttribute('data-theme'); $('tbtn').textContent='🌙'; }
-}
-function toggleTheme() {
-  const cur = isDark() ? 'dark' : 'light';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  try { localStorage.setItem('dash_theme', next); } catch(e) {}
-  applyTheme(next);
-  if (D) renderAll();
-}
-(function() {
-  let t = 'light';
-  try { t = localStorage.getItem('dash_theme') || 'light'; } catch(e) {}
-  applyTheme(t);
-})();
-
 /* ===== TABS ===== */
 function sw(tab) {
   document.querySelectorAll('[id^="p-"]').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.report-tab').forEach(b => b.classList.remove('on'));
   $('p-' + tab).style.display = '';
   document.querySelector('[data-tab="' + tab + '"]').classList.add('on');
   if (tab === 'cal' && D && !_calInit) { _calInit = true; initCal(); }
@@ -683,6 +690,12 @@ function calClick(key) {
 }
 
 load();
+</script>
+<script>
+SurfAdmin.initTheme('themebtn');
+document.getElementById('themebtn').addEventListener('click', function(){
+  if (D) renderAll();
+});
 </script>
 </body>
 </html>"""

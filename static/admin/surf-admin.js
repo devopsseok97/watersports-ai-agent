@@ -1,5 +1,6 @@
 (function(){
   function qs(id){ return document.getElementById(id); }
+  var activeThemeButtonId = null;
   function esc(value){
     return String(value || '')
       .replace(/&/g,'&amp;')
@@ -19,10 +20,17 @@
     const d = new Date();
     return d.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
   }
+  function themeButton(){
+    return (activeThemeButtonId && qs(activeThemeButtonId)) || qs('themebtn') || qs('tbtn');
+  }
   function applyTheme(theme){
     const dark = theme === 'dark';
-    document.documentElement.toggleAttribute('data-theme', dark);
-    const btn = qs('themebtn') || qs('tbtn');
+    if(dark){
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    const btn = themeButton();
     if(btn) btn.textContent = dark ? '밝게' : '어둡게';
   }
   function toggleTheme(){
@@ -35,8 +43,9 @@
   function initTheme(buttonId){
     let theme = 'light';
     try { theme = localStorage.getItem('dash_theme') || 'light'; } catch(e) {}
+    activeThemeButtonId = buttonId || null;
     applyTheme(theme);
-    const btn = buttonId ? qs(buttonId) : (qs('themebtn') || qs('tbtn'));
+    const btn = themeButton();
     if(btn) btn.addEventListener('click', function(){ toggleTheme(); });
   }
   window.SurfAdmin = { qs, esc, won, fmtDateTime, todayLabel, applyTheme, toggleTheme, initTheme };
