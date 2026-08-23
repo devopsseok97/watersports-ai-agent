@@ -165,6 +165,8 @@ def test_photos_page_has_delivery_regions(monkeypatch):
         'id="photo-delivery"',
         'id="album-create-panel"',
         'id="list"',
+        'role="status"',
+        'aria-live="polite"',
         "앨범을 만들고 QR을 손님에게 보여주세요",
     ]:
         assert marker in response.text

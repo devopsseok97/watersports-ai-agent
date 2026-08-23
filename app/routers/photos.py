@@ -458,7 +458,7 @@ async function load(){
           <button class="sf-btn sf-btn--danger delbtn" onclick="deleteAlbum('${a.code}')" type="button">삭제</button>
         </div>
         <a class="album-link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
-        <div class="album-upload-status" id="upload-status-${a.code}" aria-live="polite"></div>
+        <div class="album-upload-status" id="upload-status-${a.code}" role="status" aria-live="polite"></div>
         <div class="drop" data-code="${a.code}">사진을 끌어다 놓거나 클릭해서 선택</div>
         <input type="file" multiple accept="image/*" style="display:none" data-code="${a.code}">
         <div id="thumbs-${a.code}"></div>
