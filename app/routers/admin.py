@@ -446,51 +446,59 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
     </header>
     <main class="sf-page">
-  <div class="cards">
-    <div class="stat clickable" onclick="openCard('total')">
-      <div class="label">전체 문의</div><div class="value" id="s-total">-</div>
-      <div class="sublabel">눌러서 전체 보기 ›</div>
-    </div>
-    <div class="stat accent clickable" onclick="openCard('today')">
-      <div class="label">오늘 문의</div><div class="value" id="s-today">-</div>
-      <div class="sublabel">눌러서 오늘 보기 ›</div>
-    </div>
-    <div class="stat green clickable" onclick="openCard('confirmed')">
-      <div class="label">예약 확정 고객</div><div class="value" id="s-confirmed">-</div>
-      <div class="sublabel" id="s-confirmed-sub">눌러서 명단 보기 ›</div>
-    </div>
-    <div class="stat warn clickable" onclick="openCard('revenue')">
-      <div class="label">수입 (이번 달)</div><div class="value money" id="s-revenue">-</div>
-      <div class="sublabel">눌러서 수입 보기 ›</div>
-    </div>
-    <div class="stat amber clickable" onclick="openCard('pending')">
-      <div class="label">입금대기</div><div class="value" id="s-pending">-</div>
-      <div class="sublabel" id="s-pending-sub">눌러서 대기 보기 ›</div>
-    </div>
-  </div>
+      <div class="sf-page-head">
+        <div>
+          <div class="sf-eyebrow">오늘 운영</div>
+          <h1 class="sf-page-title">서퍼스트 현장 상태</h1>
+          <p class="sf-page-sub" id="today-label">오늘 예약과 문의를 확인하세요.</p>
+        </div>
+        <div class="sf-actions">
+          <a class="sf-btn sf-btn--primary" href="/availability/admin">예약 추가</a>
+          <button class="sf-btn sf-btn--ghost" onclick="loadAll()" type="button">새로고침</button>
+        </div>
+      </div>
 
-  <h2>📊 수입 분석</h2>
-  <div class="kpirow">
-    <div class="kpi"><div class="k">이번 달 수입</div><div class="v" id="kpi-month">-</div></div>
-    <div class="kpi"><div class="k">전달 대비</div><div class="v" id="kpi-diff">-</div></div>
-    <div class="kpi"><div class="k">1인 평균 단가</div><div class="v" id="kpi-avg">-</div></div>
-  </div>
-  <div class="chartrow">
-    <div class="chartbox">
-      <div class="clabel">월별 수입 추이 (최근 6개월, 만원)</div>
-      <canvas id="monthChart"></canvas>
-    </div>
-    <div class="chartbox">
-      <div class="clabel">종목별 수입 비율</div>
-      <canvas id="progChart"></canvas>
-    </div>
-  </div>
+      <div class="sf-card-grid ops-metrics">
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('confirmed')">
+          <div class="sf-metric__label">오늘 방문</div>
+          <div class="sf-metric__value" id="s-today-ppl">-</div>
+          <div class="sf-metric__note" id="s-today-rev">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('revenue')">
+          <div class="sf-metric__label">이번 달 수입</div>
+          <div class="sf-metric__value money" id="s-revenue">-</div>
+          <div class="sf-metric__note" id="s-month-ppl">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('pending')">
+          <div class="sf-metric__label">입금대기</div>
+          <div class="sf-metric__value" id="s-pending">-</div>
+          <div class="sf-metric__note" id="s-pending-sub">-</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('intents')">
+          <div class="sf-metric__label">예약문의</div>
+          <div class="sf-metric__value" id="s-intents">-</div>
+          <div class="sf-metric__note">최근 의향 고객</div>
+        </button>
+      </div>
 
-  <h2>🔔 예약 의향 고객</h2>
-  <div id="intents"><div class="empty">불러오는 중...</div></div>
-
-  <h2>💬 최근 대화 기록</h2>
-  <div id="convos"><div class="empty">불러오는 중...</div></div>
+      <div class="ops-layout">
+        <section class="sf-panel">
+          <h2 class="sf-section-title">처리할 일</h2>
+          <div id="ops-alerts" class="ops-alerts"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">오늘 예약 타임라인</h2>
+          <div id="today-timeline" class="timeline-list"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">예약 의향 고객</h2>
+          <div id="intents"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+        <section class="sf-panel">
+          <h2 class="sf-section-title">최근 대화</h2>
+          <div id="convos"><div class="sf-empty">불러오는 중...</div></div>
+        </section>
+      </div>
     </main>
   </div>
 </div>
@@ -523,6 +531,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 let _mChart=null, _pChart=null;
 
 function buildCharts(list){
+  const monthCanvas=document.getElementById('monthChart');
+  const progCanvas=document.getElementById('progChart');
+  if(!monthCanvas || !progCanvas || typeof Chart==='undefined') return;
   const ok=(list||[]).filter(r=>(r.status||'예약')==='예약');
   const now=new Date();
   const months=[];
@@ -561,9 +572,8 @@ function buildCharts(list){
     ?['#818cf8','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa','#fb923c','#94a3b8']
     :['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#f97316','#64748b'];
 
-  if(typeof Chart==='undefined') return;
   if(_mChart) _mChart.destroy();
-  _mChart=new Chart(document.getElementById('monthChart'),{
+  _mChart=new Chart(monthCanvas,{
     type:'bar',
     data:{
       labels:months.map(m=>m.slice(5)+'월'),
@@ -584,7 +594,7 @@ function buildCharts(list){
   });
 
   if(_pChart) _pChart.destroy();
-  _pChart=pLabels.length?new Chart(document.getElementById('progChart'),{
+  _pChart=pLabels.length?new Chart(progCanvas,{
     type:'doughnut',
     data:{
       labels:pLabels,
@@ -605,29 +615,57 @@ function fmt(ts){ if(!ts)return'-'; const d=new Date(ts); return d.toLocaleStrin
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function uid(s){ return s?esc(String(s).slice(0,8))+'…':'-'; }
 function won(n){ return (Number(n)||0).toLocaleString('ko-KR')+'원'; }
+function todayKey(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const out={};
+  parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
+  return (out.year||'')+'-'+(out.month||'')+'-'+(out.day||'');
+}
 
 async function loadAll(){
   try {
-    const [stats,intents,convos,resStats,resList]=await Promise.all([
+    const [stats,rawIntents,rawConvos,resStats,rawResList]=await Promise.all([
       fetch('api/stats').then(r=>r.json()),
       fetch('api/intents').then(r=>r.json()),
       fetch('api/conversations').then(r=>r.json()),
       fetch('api/reservation-stats').then(r=>r.json()),
       fetch('api/reservations').then(r=>r.json()),
     ]);
+    const intents=Array.isArray(rawIntents)?rawIntents:[];
+    const convos=Array.isArray(rawConvos)?rawConvos:[];
+    const resList=Array.isArray(rawResList)?rawResList:[];
     window._convosAll=convos||[];
+    window._intentsAll=intents||[];
     window._resStats=resStats||{};
     window._resList=resList||[];
 
     buildCharts(window._resList);
 
-    document.getElementById('s-total').textContent=stats.total_conversations??0;
-    document.getElementById('s-today').textContent=stats.today_conversations??0;
-    document.getElementById('s-confirmed').textContent=(resStats.total_reservations??0)+'건';
-    document.getElementById('s-confirmed-sub').textContent='누적 '+(resStats.total_people??0)+'명 · 눌러서 명단 ›';
-    document.getElementById('s-revenue').textContent=won(resStats.month_revenue);
+    document.getElementById('today-label').textContent=SurfAdmin.todayLabel()+' 기준';
+    document.getElementById('s-today-ppl').textContent=(resStats.today_people??0)+'명';
+    document.getElementById('s-today-rev').textContent=SurfAdmin.won(resStats.today_revenue);
+    document.getElementById('s-revenue').textContent=SurfAdmin.won(resStats.month_revenue);
+    document.getElementById('s-month-ppl').textContent='이번 달 '+(resStats.month_people??0)+'명';
     document.getElementById('s-pending').textContent=(resStats.pending_total??0)+'건';
-    document.getElementById('s-pending-sub').textContent=(resStats.pending_people??0)+'명 · '+won(resStats.pending_amount)+' 대기 ›';
+    document.getElementById('s-pending-sub').textContent=(resStats.pending_people??0)+'명 · '+SurfAdmin.won(resStats.pending_amount);
+    document.getElementById('s-intents').textContent=(intents||[]).length+'건';
+
+    const alerts=[];
+    if((resStats.pending_total??0)>0) alerts.push(`<a class="ops-alert ops-alert--pending" href="/availability/admin"><b>입금대기 ${resStats.pending_total}건</b><span>${SurfAdmin.won(resStats.pending_amount)} 확인 필요</span></a>`);
+    if((intents||[]).length>0) alerts.push(`<button class="ops-alert" type="button" onclick="openCard('intents')"><b>예약문의 ${intents.length}건</b><span>최근 문의를 확인하세요</span></button>`);
+    document.getElementById('ops-alerts').innerHTML=alerts.length?alerts.join(''):'<div class="sf-empty">지금 처리할 항목이 없습니다.</div>';
+
+    const today=todayKey();
+    const todayRows=(resList||[]).filter(r=>r.slot_date===today).sort((a,b)=>String(a.time_slot||'').localeCompare(String(b.time_slot||'')));
+    document.getElementById('today-timeline').innerHTML=todayRows.length?todayRows.map(r=>{
+      const status=r.status||'예약';
+      const cls=status==='입금대기'?'sf-status--pending':status==='노쇼'?'sf-status--danger':'sf-status--ok';
+      return `<div class="timeline-row">
+        <div class="timeline-time">${SurfAdmin.esc(r.time_slot||'-')}</div>
+        <div class="timeline-main"><b>${SurfAdmin.esc(r.customer_name||'(이름없음)')}</b><span>${SurfAdmin.esc(r.program||'기타')} · ${Number(r.people)||0}명</span></div>
+        <span class="sf-status ${cls}">${SurfAdmin.esc(status)}</span>
+      </div>`;
+    }).join(''):'<div class="sf-empty">오늘 입력된 예약이 없습니다.</div>';
 
     const it=document.getElementById('intents');
     it.innerHTML=intents.length?intents.map(r=>{
@@ -772,9 +810,26 @@ function openCard(type){
   const title=document.getElementById('cm-title');
   const body=document.getElementById('cm-body');
   const convos=window._convosAll||[];
+  const intents=window._intentsAll||[];
   const rs=window._resStats||{};
   const list=window._resList||[];
-  if(type==='total'){
+  if(type==='intents'){
+    title.textContent='🔔 예약 의향 고객 ('+intents.length+'건)';
+    body.innerHTML=intents.length?intents.map(r=>{
+      const memo=r.admin_memo||'';
+      return `
+        <div class="item" id="modal-intent-${r.id}">
+          <div class="head">
+            <span class="tag">예약문의</span><span class="time">${fmt(r.created_at)}</span><span class="uid">${uid(r.user_id)}</span>
+            <span class="spacer"></span>
+            <button class="memobtn" onclick="closeCard(); editMemo(${r.id})">📝 메모</button>
+            <span class="arrow clickable" style="cursor:pointer" onclick="closeCard(); openUser('${esc(r.user_id)}')">›</span>
+          </div>
+          <div class="q clickable" style="cursor:pointer" onclick="closeCard(); openUser('${esc(r.user_id)}')">${esc(r.user_message)}</div>
+          <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
+        </div>`;
+    }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';
+  } else if(type==='total'){
     title.textContent='💬 전체 문의 ('+convos.length+'건)';
     body.innerHTML=convListHTML(convos);
   } else if(type==='today'){

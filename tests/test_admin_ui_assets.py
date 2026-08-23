@@ -82,3 +82,18 @@ def test_touch_targets_keep_40px_minimums():
     assert ".delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }" in photos.ADMIN_HTML
     assert ".thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;" in photos.ADMIN_HTML
     assert "cursor:pointer; padding:0; line-height:40px; text-align:center; }" in photos.ADMIN_HTML
+
+
+def test_admin_home_has_operations_console_regions(monkeypatch):
+    response = client.get("/admin/", cookies=admin_cookie(monkeypatch))
+    assert response.status_code == 200
+    for marker in [
+        'id="ops-alerts"',
+        'id="today-timeline"',
+        'id="intents"',
+        'id="convos"',
+        'href="/availability/admin"',
+    ]:
+        assert marker in response.text
+    assert "오늘 운영" in response.text
+    assert "예약 추가" in response.text
