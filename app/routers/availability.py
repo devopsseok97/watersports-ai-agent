@@ -177,7 +177,7 @@ ADMIN_HTML = """<!DOCTYPE html>
   .seatlegend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; }
   .seatlegend .lg { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--sub); font-weight:600; }
   .seatlegend .lg i { width:11px; height:11px; border-radius:3px; display:inline-block; }
-  .sumgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
+  .sumgrid-legacy { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
   .seat { position:relative; overflow:hidden; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px 8px; background:var(--field); }
   .seat .gbar { height:4px; margin:-10px -12px 8px; background:var(--gc,#64748b); }
   .seat .stop { font-size:12px; color:var(--gc,var(--sub)); font-weight:800; margin-bottom:1px; }
@@ -222,7 +222,7 @@ ADMIN_HTML = """<!DOCTYPE html>
   .res-row { border-bottom:1px solid var(--line); }
   .res-row:last-child { border-bottom:none; }
   .res-row:hover { background:var(--field); }
-  .res-main { display:flex; align-items:center; gap:10px; padding:10px 4px; }
+  .res-main-legacy { display:flex; align-items:center; gap:10px; padding:10px 4px; }
   .tr-noshow { opacity:.5; }
   .tr-noshow .r-nm { text-decoration:line-through; }
   .tr-canceled { opacity:.45; }
@@ -278,7 +278,7 @@ ADMIN_HTML = """<!DOCTYPE html>
     main { padding:12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
 
     /* 잔여석: 가로 스크롤 1줄 */
-    .sumgrid { display:flex; overflow-x:auto; gap:8px; padding-bottom:4px;
+    .sumgrid-legacy { display:flex; overflow-x:auto; gap:8px; padding-bottom:4px;
                -webkit-overflow-scrolling:touch; grid-template-columns:unset; }
     .seat { min-width:96px; flex-shrink:0; }
 
@@ -353,7 +353,7 @@ ADMIN_HTML = """<!DOCTYPE html>
                 <span class="lg"><i style="background:#0d9488"></i>윈드서핑</span>
                 <span class="lg"><i style="background:#db2777"></i>포일류</span>
               </div>
-              <div class="seat-board sumgrid" id="summary"></div>
+              <div class="seat-board" id="summary"></div>
             </section>
 
             <section class="sf-panel">
@@ -544,7 +544,10 @@ function focusAddForm(){
     panel.scrollIntoView({behavior:'smooth', block:'start', inline:'nearest'});
   }
   if(firstField && typeof firstField.focus === 'function'){
-    window.setTimeout(()=>firstField.focus({preventScroll:true}), 160);
+    window.setTimeout(()=>{
+      try { firstField.focus({preventScroll:true}); }
+      catch(_err){ firstField.focus(); }
+    }, 160);
   }
 }
 

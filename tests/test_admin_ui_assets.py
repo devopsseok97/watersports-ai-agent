@@ -128,3 +128,32 @@ def test_availability_page_has_workbench_regions(monkeypatch):
         "입금대기",
     ]:
         assert marker in response.text
+
+
+def test_availability_admin_html_contains_focus_fallback_contract():
+    assert "function focusAddForm(){" in availability.ADMIN_HTML
+    assert "firstField.focus({preventScroll:true})" in availability.ADMIN_HTML
+    assert "catch(_err){ firstField.focus(); }" in availability.ADMIN_HTML
+
+
+def test_availability_admin_html_contains_summary_status_contract():
+    for marker in [
+        "여유",
+        "주의",
+        "마감",
+        "seat-card",
+        "sf-status--pending",
+        "sf-status--full",
+        "sf-status--ok",
+    ]:
+        assert marker in availability.ADMIN_HTML
+
+
+def test_availability_admin_html_contains_list_badges_and_actions_contract():
+    for marker in [
+        '<span class="sf-status sf-status--ok">예약</span>',
+        '<span class="sf-status sf-status--pending">입금대기</span>',
+        '<span class="sf-status sf-status--danger">노쇼</span>',
+        ">확정</button>",
+    ]:
+        assert marker in availability.ADMIN_HTML
