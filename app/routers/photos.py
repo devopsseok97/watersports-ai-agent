@@ -407,15 +407,26 @@ ADMIN_HTML = """<!DOCTYPE html>
       </div>
     </header>
     <main class="sf-page">
-  <div class="new">
-    <div class="row">
-      <input id="memo" placeholder="메모 (예: 6/4 오전 데패강 김OO님)">
-      <button onclick="createAlbum()">+ 새 앨범 만들기</button>
-    </div>
-    <p class="hint">앨범을 만들면 QR이 나와요. 손님에게 QR을 보여주고 스캔하게 하면 끝.<br>사진은 아래 박스에 끌어다 놓으면 올라가요.</p>
-  </div>
-  <div id="list"><div class="empty">불러오는 중...</div></div>
-</main>
+      <div id="photo-delivery">
+        <div class="sf-page-head">
+          <div>
+            <div class="sf-eyebrow">사진 전달</div>
+            <h1 class="sf-page-title">현장 앨범</h1>
+            <p class="sf-page-sub">앨범을 만들고 QR을 손님에게 보여주세요.</p>
+          </div>
+        </div>
+        <section class="sf-panel album-create-panel" id="album-create-panel">
+          <div class="sf-form-grid">
+            <div class="sf-field sf-field--full">
+              <label for="memo">앨범 메모</label>
+              <input id="memo" placeholder="예: 8월 23일 오후 강습">
+            </div>
+            <button class="sf-btn sf-btn--primary" onclick="createAlbum()" type="button">새 앨범 만들기</button>
+          </div>
+        </section>
+        <section class="album-list" id="list"><div class="sf-empty">불러오는 중...</div></section>
+      </div>
+    </main>
   </div>
 </div>
 <script>
@@ -434,22 +445,25 @@ async function createAlbum(){
 async function load(){
   const albums = await fetch('api/albums').then(r=>r.json());
   const el = document.getElementById('list');
-  if(!albums.length){ el.innerHTML='<div class="empty">아직 앨범이 없어요. 위에서 새로 만들어 보세요.</div>'; return; }
+  if(!albums.length){ el.innerHTML='<div class="sf-empty">아직 앨범이 없어요. 위에서 새로 만들어 보세요.</div>'; return; }
   el.innerHTML = albums.map(a=>`
-    <div class="album ${a.expired?'expired':''}" id="album-${a.code}">
-      <img class="qr" src="qr/${a.code}.png">
-      <div class="info">
-        <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;">
-          <div class="code">${esc(a.code)}</div>
-          <button class="delbtn" onclick="deleteAlbum('${a.code}')">앨범 삭제</button>
+    <article class="album-card ${a.expired?'is-expired':''}" id="album-${a.code}">
+      <img class="album-card__qr" src="qr/${a.code}.png" alt="${esc(a.code)} QR">
+      <div class="album-card__body">
+        <div class="album-card__head">
+          <div>
+            <div class="album-code">${esc(a.code)}</div>
+            <div class="album-meta">${esc(a.memo)||'(메모 없음)'} · 사진 ${a.photo_count||0}장 · ${a.expired?'만료됨':'~'+fmt(a.expires_at)}</div>
+          </div>
+          <button class="sf-btn sf-btn--danger delbtn" onclick="deleteAlbum('${a.code}')" type="button">삭제</button>
         </div>
-        <div class="meta">${esc(a.memo)||'(메모 없음)'} · 사진 ${a.photo_count||0}장 · ${a.expired?'만료됨':'~'+fmt(a.expires_at)}</div>
-        <a class="link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
-        <div id="thumbs-${a.code}"></div>
-        <div class="drop" data-code="${a.code}">여기에 사진을 끌어다 놓거나 클릭해서 선택</div>
+        <a class="album-link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
+        <div class="album-upload-status" id="upload-status-${a.code}" aria-live="polite"></div>
+        <div class="drop" data-code="${a.code}">사진을 끌어다 놓거나 클릭해서 선택</div>
         <input type="file" multiple accept="image/*" style="display:none" data-code="${a.code}">
+        <div id="thumbs-${a.code}"></div>
       </div>
-    </div>`).join('');
+    </article>`).join('');
   bindDrops();
   albums.forEach(a => loadThumbs(a.code));
 }
@@ -494,9 +508,18 @@ async function uploadFiles(code, files){
   const fd = new FormData();
   for(const f of files) fd.append('files', f);
   const drop = document.querySelector(`.drop[data-code="${code}"]`);
-  drop.textContent = '업로드 중...';
-  await fetch(`api/albums/${code}/upload`, {method:'POST', body:fd});
-  load();
+  const status = document.getElementById(`upload-status-${code}`);
+  if(drop) drop.textContent = '업로드 중...';
+  if(status) status.textContent = files.length + '장 업로드 중...';
+  try{
+    const res = await fetch(`api/albums/${code}/upload`, {method:'POST', body:fd});
+    if(!res.ok) throw new Error('upload failed');
+    if(status) status.textContent = '업로드 완료';
+    load();
+  }catch(_err){
+    if(drop) drop.textContent = '사진을 끌어다 놓거나 클릭해서 선택';
+    if(status) status.textContent = '업로드 실패. 다시 시도해 주세요.';
+  }
 }
 load();
 </script>

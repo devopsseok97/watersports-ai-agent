@@ -123,6 +123,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sf-check { display: flex; align-items: center; gap: 9px; color: var(--sf-muted); font-weight: 750; font-size: 14px; }
 .error { background: rgba(217,74,58,.1); border: 1px solid rgba(217,74,58,.28); color: var(--sf-red); border-radius: 8px; padding: 11px 12px; margin-bottom: 14px; }
 
+.album-create-panel { margin-bottom: 12px; }
+.album-list { display: grid; gap: 12px; }
+.album-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 14px; background: var(--sf-surface); border: 1px solid var(--sf-line); border-radius: 10px; padding: 14px; box-shadow: var(--sf-shadow); }
+.album-card.is-expired { opacity: .58; }
+.album-card__qr { width: 132px; height: 132px; object-fit: contain; background: #fff; border: 1px solid var(--sf-line); border-radius: 8px; padding: 6px; }
+.album-card__body { min-width: 0; }
+.album-card__head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.album-code { font-size: 22px; font-weight: 950; letter-spacing: .04em; }
+.album-meta, .album-upload-status { color: var(--sf-muted); font-size: 13px; margin-top: 3px; }
+.album-link { display: block; margin-top: 10px; color: var(--sf-river); word-break: break-all; font-size: 13px; }
+.drop { border: 1.5px dashed var(--sf-line); border-radius: 9px; margin-top: 10px; padding: 16px; text-align: center; color: var(--sf-muted); background: var(--sf-surface-raised); cursor: pointer; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+.drop.over { border-color: var(--sf-river); color: var(--sf-river); }
+.report-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; }
+.report-tab { min-height: 40px; border: 1px solid var(--sf-line); border-radius: 8px; background: var(--sf-surface); color: var(--sf-muted); padding: 0 14px; font-weight: 850; cursor: pointer; white-space: nowrap; }
+.report-tab.on { background: var(--sf-river); border-color: var(--sf-river); color: #fff; }
+.chartbox, .cbox, .cal-wrap { background: var(--sf-surface); border: 1px solid var(--sf-line); border-radius: 10px; box-shadow: var(--sf-shadow); }
+
 .date-workbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .date-workbar input[type="date"] { min-height: 40px; border: 1px solid var(--sf-line); border-radius: 8px; background: var(--sf-field); color: var(--sf-ink); padding: 0 10px; }
 .reservation-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; align-items: start; }
@@ -168,6 +185,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .seat-card { min-width: 132px; }
   .res-main { grid-template-columns: 54px minmax(0, 1fr) 76px; }
   .r-prog, .r-amt { display: none; }
+  .album-card { grid-template-columns: 1fr; }
+  .album-card__qr { width: 112px; height: 112px; }
 }
 
 @media (max-width: 480px) {

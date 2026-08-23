@@ -76,8 +76,7 @@ def test_touch_targets_keep_40px_minimums():
     assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;" in dashboard.DASHBOARD_HTML
     assert ".rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);" in dashboard.DASHBOARD_HTML
     assert "border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;min-width:40px;min-height:40px;cursor:pointer;}" in dashboard.DASHBOARD_HTML
-    assert ".tab{background:none;border:none;border-bottom:3px solid transparent;" in dashboard.DASHBOARD_HTML
-    assert "color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px; min-width:40px; min-height:40px;" in dashboard.DASHBOARD_HTML
+    assert ".report-tab { min-height: 40px;" in client.get("/static/admin/surf-admin.css").text
     assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;" in dashboard.DASHBOARD_HTML
     assert ".delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }" in photos.ADMIN_HTML
     assert ".thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;" in photos.ADMIN_HTML
@@ -157,3 +156,28 @@ def test_availability_admin_html_contains_list_badges_and_actions_contract():
         ">확정</button>",
     ]:
         assert marker in availability.ADMIN_HTML
+
+
+def test_photos_page_has_delivery_regions(monkeypatch):
+    response = client.get("/photos/admin", cookies=admin_cookie(monkeypatch))
+    assert response.status_code == 200
+    for marker in [
+        'id="photo-delivery"',
+        'id="album-create-panel"',
+        'id="list"',
+        "앨범을 만들고 QR을 손님에게 보여주세요",
+    ]:
+        assert marker in response.text
+
+
+def test_dashboard_page_has_report_regions(monkeypatch):
+    response = client.get("/dashboard/", cookies=admin_cookie(monkeypatch))
+    assert response.status_code == 200
+    for marker in [
+        'id="analytics-report"',
+        'id="p-ov"',
+        'id="p-ch"',
+        'id="p-cal"',
+        "영업 리포트",
+    ]:
+        assert marker in response.text

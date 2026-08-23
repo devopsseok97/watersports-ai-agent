@@ -308,11 +308,22 @@ tr:last-child td{border-bottom:none;}
       </div>
     </header>
     <main class="sf-page">
-      <div class="tabs">
-        <button class="tab on" data-tab="ov" onclick="sw('ov')">📈 개요</button>
-        <button class="tab" data-tab="ch" onclick="sw('ch')">🏪 채널·종목</button>
-        <button class="tab" data-tab="cal" onclick="sw('cal')">📅 캘린더</button>
-      </div>
+      <div id="analytics-report">
+        <div class="sf-page-head">
+          <div>
+            <div class="sf-eyebrow">분석</div>
+            <h1 class="sf-page-title">영업 리포트</h1>
+            <p class="sf-page-sub">매출, 채널, 종목, 요일별 흐름을 확인합니다.</p>
+          </div>
+          <div class="sf-actions">
+            <button class="sf-btn sf-btn--ghost" onclick="reload()" type="button">새로고침</button>
+          </div>
+        </div>
+        <div class="report-tabs">
+          <button class="report-tab on" data-tab="ov" onclick="sw('ov')" type="button">개요</button>
+          <button class="report-tab" data-tab="ch" onclick="sw('ch')" type="button">채널·종목</button>
+          <button class="report-tab" data-tab="cal" onclick="sw('cal')" type="button">캘린더</button>
+        </div>
 
   <!-- ===== TAB: 개요 ===== -->
   <div id="p-ov">
@@ -372,6 +383,7 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
   </div>
+      </div>
 
 </main>
   </div>
@@ -394,7 +406,7 @@ function COLORS() {
 /* ===== TABS ===== */
 function sw(tab) {
   document.querySelectorAll('[id^="p-"]').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.report-tab').forEach(b => b.classList.remove('on'));
   $('p-' + tab).style.display = '';
   document.querySelector('[data-tab="' + tab + '"]').classList.add('on');
   if (tab === 'cal' && D && !_calInit) { _calInit = true; initCal(); }
