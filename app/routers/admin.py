@@ -459,7 +459,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
 
       <div class="sf-card-grid ops-metrics">
-        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('confirmed')">
+        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('today-reservations')">
           <div class="sf-metric__label">오늘 방문</div>
           <div class="sf-metric__value" id="s-today-ppl">-</div>
           <div class="sf-metric__note" id="s-today-rev">-</div>
@@ -621,6 +621,17 @@ function todayKey(){
   parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
   return (out.year||'')+'-'+(out.month||'')+'-'+(out.day||'');
 }
+function timelineStatusClass(status){
+  if(status==='예약') return 'sf-status--ok';
+  if(status==='입금대기') return 'sf-status--pending';
+  if(status==='노쇼') return 'sf-status--danger';
+  if(status==='취소'||status==='예약취소'||status==='취소됨') return 'sf-status--muted';
+  return 'sf-status--muted';
+}
+function todayReservations(list){
+  const today=todayKey();
+  return (list||[]).filter(r=>r.slot_date===today).sort((a,b)=>String(a.time_slot||'').localeCompare(String(b.time_slot||'')));
+}
 
 async function loadAll(){
   try {
@@ -655,17 +666,16 @@ async function loadAll(){
     if((intents||[]).length>0) alerts.push(`<button class="ops-alert" type="button" onclick="openCard('intents')"><b>예약문의 ${intents.length}건</b><span>최근 문의를 확인하세요</span></button>`);
     document.getElementById('ops-alerts').innerHTML=alerts.length?alerts.join(''):'<div class="sf-empty">지금 처리할 항목이 없습니다.</div>';
 
-    const today=todayKey();
-    const todayRows=(resList||[]).filter(r=>r.slot_date===today).sort((a,b)=>String(a.time_slot||'').localeCompare(String(b.time_slot||'')));
+    const todayRows=todayReservations(resList);
     document.getElementById('today-timeline').innerHTML=todayRows.length?todayRows.map(r=>{
       const status=r.status||'예약';
-      const cls=status==='입금대기'?'sf-status--pending':status==='노쇼'?'sf-status--danger':'sf-status--ok';
+      const cls=timelineStatusClass(status);
       return `<div class="timeline-row">
         <div class="timeline-time">${SurfAdmin.esc(r.time_slot||'-')}</div>
         <div class="timeline-main"><b>${SurfAdmin.esc(r.customer_name||'(이름없음)')}</b><span>${SurfAdmin.esc(r.program||'기타')} · ${Number(r.people)||0}명</span></div>
         <span class="sf-status ${cls}">${SurfAdmin.esc(status)}</span>
       </div>`;
-    }).join(''):'<div class="sf-empty">오늘 입력된 예약이 없습니다.</div>';
+    }).join(''):'<div class="sf-empty">오늘 예약이 없습니다.</div>';
 
     const it=document.getElementById('intents');
     it.innerHTML=intents.length?intents.map(r=>{
@@ -829,6 +839,16 @@ function openCard(type){
           <div class="memo-slot">${memo?`<div class="memo-view"><b>📝 메모:</b> ${esc(memo)}</div>`:''}</div>
         </div>`;
     }).join(''):'<div class="empty">아직 예약 의향 고객이 없습니다.</div>';
+  } else if(type==='today-reservations'){
+    const todayRows=todayReservations(list);
+    title.textContent='📅 오늘 예약';
+    body.innerHTML=`
+      <div class="revbox">
+        <div class="b"><div class="k">예약 건수</div><div class="v">${rs.today_reservations||0}건</div></div>
+        <div class="b"><div class="k">방문 인원</div><div class="v">${rs.today_people||0}명</div></div>
+        <div class="b hi"><div class="k">예상 매출</div><div class="v">${won(rs.today_revenue)}</div></div>
+      </div>
+      `+(todayRows.length?todayRows.map(resRowHTML).join(''):'<div class="empty">오늘 예약이 없습니다.</div>');
   } else if(type==='total'){
     title.textContent='💬 전체 문의 ('+convos.length+'건)';
     body.innerHTML=convListHTML(convos);

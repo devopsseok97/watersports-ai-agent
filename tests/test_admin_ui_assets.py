@@ -97,3 +97,19 @@ def test_admin_home_has_operations_console_regions(monkeypatch):
         assert marker in response.text
     assert "오늘 운영" in response.text
     assert "예약 추가" in response.text
+
+
+def test_admin_home_today_metric_targets_today_reservations_modal():
+    assert """onclick="openCard('today-reservations')\"""" in admin.DASHBOARD_HTML
+    assert "if(type==='today-reservations'){" in admin.DASHBOARD_HTML
+    assert "오늘 예약" in admin.DASHBOARD_HTML
+
+
+def test_admin_home_timeline_uses_explicit_status_mapping():
+    assert "function timelineStatusClass(status){" in admin.DASHBOARD_HTML
+    assert "if(status==='예약') return 'sf-status--ok';" in admin.DASHBOARD_HTML
+    assert "if(status==='입금대기') return 'sf-status--pending';" in admin.DASHBOARD_HTML
+    assert "if(status==='노쇼') return 'sf-status--danger';" in admin.DASHBOARD_HTML
+    assert "if(status==='취소'||status==='예약취소'||status==='취소됨') return 'sf-status--muted';" in admin.DASHBOARD_HTML
+    assert "return 'sf-status--muted';" in admin.DASHBOARD_HTML
+    assert "오늘 예약이 없습니다." in admin.DASHBOARD_HTML
