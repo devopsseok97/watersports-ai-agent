@@ -318,87 +318,111 @@ ADMIN_HTML = """<!DOCTYPE html>
       </div>
     </header>
     <main class="sf-page">
-  <div class="datebar">
-    <button class="quick" onclick="shiftDay(-1)" style="font-size:20px;padding:10px 14px;">‹</button>
-    <input type="date" id="date">
-    <button class="quick" onclick="shiftDay(1)" style="font-size:20px;padding:10px 14px;">›</button>
-    <button class="quick" onclick="setDay(0)">오늘</button>
-    <button class="quick" onclick="setDay(1)">내일</button>
-    <button class="quick" onclick="setDay(2)">모레</button>
-  </div>
+      <div id="reservation-workbench">
+        <div class="sf-page-head">
+          <div>
+            <div class="sf-eyebrow">예약 관리</div>
+            <h1 class="sf-page-title">날짜별 예약 작업대</h1>
+            <p class="sf-page-sub">잔여석을 확인하고 예약·입금 상태를 바로 수정합니다.</p>
+          </div>
+          <div class="sf-actions">
+            <button class="sf-btn sf-btn--primary" onclick="focusAddForm()" type="button">예약 추가</button>
+            <button class="sf-btn sf-btn--ghost" onclick="loadDay()" type="button">새로고침</button>
+          </div>
+        </div>
 
-  <div class="card">
-    <h2>잔여 좌석 (자동 합산)</h2>
-    <div class="seatlegend">
-      <span class="lg"><i style="background:#2563eb"></i>패들보드</span>
-      <span class="lg"><i style="background:#7c3aed"></i>카약</span>
-      <span class="lg"><i style="background:#0d9488"></i>윈드서핑</span>
-      <span class="lg"><i style="background:#db2777"></i>포일류</span>
-    </div>
-    <div class="sumgrid" id="summary"></div>
-  </div>
+        <section class="sf-panel date-workbar">
+          <button class="sf-btn sf-icon-btn" onclick="shiftDay(-1)" type="button">‹</button>
+          <input id="date" type="date" onchange="loadDay()">
+          <button class="sf-btn sf-icon-btn" onclick="shiftDay(1)" type="button">›</button>
+          <button class="sf-btn sf-btn--ghost" onclick="setDay(0)" type="button">오늘</button>
+          <button class="sf-btn sf-btn--ghost" onclick="setDay(1)" type="button">내일</button>
+          <button class="sf-btn sf-btn--ghost" onclick="setDay(2)" type="button">모레</button>
+        </section>
 
-  <div class="card">
-    <h2>＋ 예약 추가</h2>
-    <div class="form">
-      <div class="field">
-        <label>종목</label>
-        <select id="f_prog" onchange="onProgChange()"></select>
-      </div>
-      <div class="field">
-        <label>시간</label>
-        <select id="f_time"></select>
-        <input id="f_time_txt" placeholder="예: 16:00" style="display:none;">
-      </div>
-      <div class="field">
-        <label>이름</label>
-        <input id="f_name" placeholder="예: 김진수">
-      </div>
-      <div class="field">
-        <label>인원</label>
-        <input id="f_people" type="number" min="1" value="2">
-      </div>
-      <div class="field">
-        <label>플랫폼</label>
-        <select id="f_plat"></select>
-      </div>
-      <div class="field">
-        <label>결제수단</label>
-        <select id="f_pay">
-          <option value="계좌이체">💳 계좌이체</option>
-          <option value="현장카드">💳 현장카드</option>
-          <option value="현금">💵 현금</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>상태</label>
-        <select id="f_status">
-          <option value="예약">✅ 예약 확정</option>
-          <option value="입금대기">⏳ 입금대기 (가예약)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>예약금 (원)</label>
-        <input id="f_deposit" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 20000">
-      </div>
-      <div class="field">
-        <label>실수령 금액 (원) <span id="price-hint" style="color:var(--accent);font-weight:600;font-size:13px;margin-left:6px;"></span></label>
-        <input id="f_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
-      </div>
-      <div class="field full">
-        <label>메모 (사장님 전용 · 손님에게 안 보임)</label>
-        <input id="f_memo" placeholder="예: 미입금 / 단체 / 외국인">
-      </div>
-      <button class="addbtn" onclick="addRes()">예약 추가</button>
-    </div>
-    <div class="hint">건만 추가하면 위 잔여 좌석이 자동으로 합산·마감 처리됩니다.<br>이름·플랫폼·메모는 챗봇/손님에게 절대 안 나갑니다.</div>
-  </div>
+        <div class="reservation-layout">
+          <div class="reservation-main">
+            <section class="sf-panel">
+              <div class="panel-headline">
+                <h2 class="sf-section-title">잔여석</h2>
+                <span class="sf-page-sub">여유 · 주의 · 마감</span>
+              </div>
+              <div class="seatlegend">
+                <span class="lg"><i style="background:#2563eb"></i>패들보드</span>
+                <span class="lg"><i style="background:#7c3aed"></i>카약</span>
+                <span class="lg"><i style="background:#0d9488"></i>윈드서핑</span>
+                <span class="lg"><i style="background:#db2777"></i>포일류</span>
+              </div>
+              <div class="seat-board sumgrid" id="summary"></div>
+            </section>
 
-  <div class="card">
-    <h2 id="listttl">예약 목록</h2>
-    <div id="list"></div>
-  </div>
-</main>
+            <section class="sf-panel">
+              <div class="panel-headline">
+                <h2 class="sf-section-title">예약 타임라인</h2>
+                <span class="sf-page-sub" id="listttl">0건</span>
+              </div>
+              <div id="list"></div>
+            </section>
+          </div>
+
+          <aside class="sf-panel quick-add-panel" id="quick-add-panel">
+            <h2 class="sf-section-title">예약 추가</h2>
+            <div class="form sf-form-grid">
+              <div class="field sf-field">
+                <label>종목</label>
+                <select id="f_prog" onchange="onProgChange()"></select>
+              </div>
+              <div class="field sf-field">
+                <label>시간</label>
+                <select id="f_time"></select>
+                <input id="f_time_txt" placeholder="예: 16:00" style="display:none;">
+              </div>
+              <div class="field sf-field">
+                <label>이름</label>
+                <input id="f_name" placeholder="예: 김진수">
+              </div>
+              <div class="field sf-field">
+                <label>인원</label>
+                <input id="f_people" type="number" min="1" value="2">
+              </div>
+              <div class="field sf-field">
+                <label>플랫폼</label>
+                <select id="f_plat"></select>
+              </div>
+              <div class="field sf-field">
+                <label>결제수단</label>
+                <select id="f_pay">
+                  <option value="계좌이체">💳 계좌이체</option>
+                  <option value="현장카드">💳 현장카드</option>
+                  <option value="현금">💵 현금</option>
+                </select>
+              </div>
+              <div class="field sf-field">
+                <label>상태</label>
+                <select id="f_status">
+                  <option value="예약">✅ 예약 확정</option>
+                  <option value="입금대기">⏳ 입금대기 (가예약)</option>
+                </select>
+              </div>
+              <div class="field sf-field">
+                <label>예약금 (원)</label>
+                <input id="f_deposit" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 20000">
+              </div>
+              <div class="field sf-field">
+                <label>실수령 금액 (원) <span id="price-hint" style="color:var(--accent);font-weight:600;font-size:13px;margin-left:6px;"></span></label>
+                <input id="f_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
+              </div>
+              <div class="field full sf-field sf-field--full">
+                <label>메모 (사장님 전용 · 손님에게 안 보임)</label>
+                <input id="f_memo" placeholder="예: 미입금 / 단체 / 외국인">
+              </div>
+              <button class="addbtn sf-btn sf-btn--primary" onclick="addRes()" type="button">예약 추가</button>
+            </div>
+            <div class="hint">건만 추가하면 위 잔여 좌석이 자동으로 합산·마감 처리됩니다.<br>이름·플랫폼·메모는 챗봇/손님에게 절대 안 나갑니다.</div>
+          </aside>
+        </div>
+      </div>
+    </main>
   </div>
 </div>
 
@@ -513,6 +537,17 @@ function localToday(){
 
 let ROWS = [];
 
+function focusAddForm(){
+  const panel = $('quick-add-panel');
+  const firstField = $('f_name') || $('f_prog');
+  if(panel){
+    panel.scrollIntoView({behavior:'smooth', block:'start', inline:'nearest'});
+  }
+  if(firstField && typeof firstField.focus === 'function'){
+    window.setTimeout(()=>firstField.focus({preventScroll:true}), 160);
+  }
+}
+
 async function init(){
   CONFIG = await fetch('api/config').then(r=>r.json());
   const progOpts = CONFIG.programs.map(p=>`<option value="${p.key}">${p.key}</option>`).join('');
@@ -576,13 +611,15 @@ function renderSummary(summary){
   el.innerHTML = summary.map((s,i)=>{
     const big = s.is_full ? '마감' : s.remaining+'<small style="font-size:16px;">자리</small>';
     const cls = s.booked>0 ? 'seatclick' : '';
-    return `<div class="seat ${seatClass(s)} grp-${progGroup(s.program)} ${cls}" onclick="openSeat(${i})">
+    const label = s.is_full ? '마감' : (s.remaining <= Math.max(1, Math.ceil(s.capacity * 0.25)) ? '주의' : '여유');
+    const labelClass = s.is_full ? 'sf-status--full' : (label === '주의' ? 'sf-status--pending' : 'sf-status--ok');
+    return `<button class="seat-card seat ${seatClass(s)} grp-${progGroup(s.program)} ${cls}" onclick="openSeat(${i})" type="button">
       <div class="gbar"></div>
-      <div class="stop">${esc(s.program)}</div>
-      <div class="stime">${esc(s.time_slot)}</div>
-      <div class="big">${big}</div>
-      <div class="frac">${s.booked}/${s.capacity}명${s.booked>0?' ›':''}</div>
-    </div>`;
+      <div class="seat-card__top"><span>${esc(s.program)}</span><span class="sf-status ${labelClass}">${label}</span></div>
+      <div class="seat-card__time">${esc(s.time_slot)}</div>
+      <div class="seat-card__big">${big}</div>
+      <div class="seat-card__meta">${s.booked}/${s.capacity}명${s.booked>0?' · 명단 보기':''}</div>
+    </button>`;
   }).join('');
 }
 
@@ -601,7 +638,7 @@ function progColor(name){
 }
 
 function renderList(rows){
-  $('listttl').textContent = `예약 목록 (${rows.length}건)`;
+  $('listttl').textContent = `${rows.length}건`;
   const el = $('list');
   if(!rows.length){ el.innerHTML = '<div class="empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
   let sumAmt = 0;
@@ -616,13 +653,14 @@ function renderList(rows){
     const hasDeposit = dep > 0;
     const rowCls = isNo ? 'tr-noshow' : (isPend ? 'tr-pending' : (hasDeposit ? 'tr-deposited' : ''));
     let badge = '';
-    if(isNo) badge = '<span class="nobadge">노쇼</span>';
-    else if(isPend) badge = '<span class="pendbadge">입금대기</span>';
+    if(isNo) badge = '<span class="sf-status sf-status--danger">노쇼</span>';
+    else if(isPend) badge = '<span class="sf-status sf-status--pending">입금대기</span>';
+    else badge = '<span class="sf-status sf-status--ok">예약</span>';
     let acts = '';
     if(isNo){
       acts = `<button onclick="setStatus(${r.id},'예약')" title="복원">↩️</button>`;
     } else if(isPend){
-      acts = `<button onclick="setStatus(${r.id},'예약')" title="입금확인 → 확정">✅</button>`;
+      acts = `<button onclick="setStatus(${r.id},'예약')" title="입금확인 → 확정">확정</button>`;
     } else {
       acts = `<button onclick="setStatus(${r.id},'입금대기')" title="입금대기로 전환">⏳</button>`;
     }

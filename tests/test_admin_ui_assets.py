@@ -113,3 +113,18 @@ def test_admin_home_timeline_uses_explicit_status_mapping():
     assert "if(status==='취소'||status==='예약취소'||status==='취소됨') return 'sf-status--muted';" in admin.DASHBOARD_HTML
     assert "return 'sf-status--muted';" in admin.DASHBOARD_HTML
     assert "오늘 예약이 없습니다." in admin.DASHBOARD_HTML
+
+
+def test_availability_page_has_workbench_regions(monkeypatch):
+    response = client.get("/availability/admin", cookies=admin_cookie(monkeypatch))
+    assert response.status_code == 200
+    for marker in [
+        'id="reservation-workbench"',
+        'id="quick-add-panel"',
+        'id="summary"',
+        'id="list"',
+        "잔여석",
+        "예약 타임라인",
+        "입금대기",
+    ]:
+        assert marker in response.text
