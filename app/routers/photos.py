@@ -370,7 +370,7 @@ ADMIN_HTML = """<!DOCTYPE html>
   .empty { color:var(--sub); padding:28px; text-align:center; font-size:16px; background:var(--card); border:1px dashed var(--line); border-radius:14px; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .hint { color:var(--sub); font-size:14px; margin:12px 0 0; line-height:1.6; }
-  .delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; }
+  .delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }
   .delbtn:active { background:#dc2626; }
   .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .thumb { position:relative; width:80px; height:80px; flex-shrink:0; }

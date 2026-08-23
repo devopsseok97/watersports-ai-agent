@@ -183,7 +183,7 @@ header{background:var(--hbg);backdrop-filter:saturate(180%) blur(12px);
 .brand span{color:var(--sub);font-size:13px;font-weight:600;margin-left:6px;}
 .htools{display:flex;gap:6px;align-items:center;}
 .ibtn{background:var(--field);border:1px solid var(--line);color:var(--txt);
-      width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:17px;
+      width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;
       display:flex;align-items:center;justify-content:center;}
 .abtn{background:var(--field);border:1px solid var(--line);color:var(--sub);
       height:38px;border-radius:10px;font-size:13px;font-weight:700;padding:0 12px;
@@ -222,7 +222,7 @@ main{padding:14px;max-width:1100px;margin:0 auto;
     display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
 .rbtns{display:flex;gap:4px;}
 .rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);
-      border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;cursor:pointer;}
+      border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;min-width:40px;min-height:40px;cursor:pointer;}
 .rbtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
 
 /* TABLE */

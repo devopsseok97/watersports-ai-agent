@@ -72,8 +72,13 @@ def test_login_page_uses_surfirst_console_copy():
 def test_touch_targets_keep_40px_minimums():
     assert ".r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
     assert ".r-acts button { font-size:21px; padding:4px 3px; min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
+    assert ".ibtn{background:var(--field);border:1px solid var(--line);color:var(--txt);" in dashboard.DASHBOARD_HTML
+    assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;" in dashboard.DASHBOARD_HTML
+    assert ".rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);" in dashboard.DASHBOARD_HTML
+    assert "border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;min-width:40px;min-height:40px;cursor:pointer;}" in dashboard.DASHBOARD_HTML
     assert ".tab{background:none;border:none;border-bottom:3px solid transparent;" in dashboard.DASHBOARD_HTML
     assert "color:var(--sub);font-size:14px;font-weight:700;padding:10px 14px; min-width:40px; min-height:40px;" in dashboard.DASHBOARD_HTML
     assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;" in dashboard.DASHBOARD_HTML
+    assert ".delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }" in photos.ADMIN_HTML
     assert ".thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;" in photos.ADMIN_HTML
     assert "cursor:pointer; padding:0; line-height:40px; text-align:center; }" in photos.ADMIN_HTML
