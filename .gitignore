@@ -9,3 +9,4 @@ venv/
 uvicorn.log
 photo_storage/
 PROJECT_SUMMARY.md
+.worktrees/
