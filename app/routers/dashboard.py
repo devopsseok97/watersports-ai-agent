@@ -144,8 +144,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>서퍼스트 · 분석</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/admin/surf-admin.js"></script>
 <style>
 :root {
   --bg:#f6f8fa; --card:#fff; --line:#d0d7de; --txt:#1f2328; --sub:#57606a;
@@ -286,22 +288,31 @@ tr:last-child td{border-bottom:none;}
 </style>
 </head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">📊 분석<span>서퍼스트</span></div>
-    <div class="htools">
-      <button class="ibtn" id="tbtn" onclick="toggleTheme()">🌙</button>
-      <button class="ibtn" onclick="reload()" title="새로고침">↻</button>
-      <a href="/admin/" class="abtn">← 관리자</a>
-    </div>
-  </div>
-  <div class="tabs">
-    <button class="tab on" data-tab="ov" onclick="sw('ov')">📈 개요</button>
-    <button class="tab" data-tab="ch" onclick="sw('ch')">🏪 채널·종목</button>
-    <button class="tab" data-tab="cal" onclick="sw('cal')">📅 캘린더</button>
-  </div>
-</header>
-<main>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/">홈</a>
+      <a class="sf-nav__link" href="/availability/admin">예약</a>
+      <a class="sf-nav__link" href="/photos/admin">사진</a>
+      <a class="sf-nav__link" href="/dashboard/" aria-current="page">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <button class="sf-btn sf-btn--ghost sf-icon-btn" onclick="reload()" title="새로고침" type="button">↻</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
+      <div class="tabs">
+        <button class="tab on" data-tab="ov" onclick="sw('ov')">📈 개요</button>
+        <button class="tab" data-tab="ch" onclick="sw('ch')">🏪 채널·종목</button>
+        <button class="tab" data-tab="cal" onclick="sw('cal')">📅 캘린더</button>
+      </div>
 
   <!-- ===== TAB: 개요 ===== -->
   <div id="p-ov">
@@ -363,6 +374,8 @@ tr:last-child td{border-bottom:none;}
   </div>
 
 </main>
+  </div>
+</div>
 <script>
 /* ===== UTILS ===== */
 const $ = id => document.getElementById(id);
@@ -377,24 +390,6 @@ function COLORS() {
     ? ['#818cf8','#34d399','#fbbf24','#f87171','#60a5fa','#a78bfa','#fb923c','#94a3b8']
     : ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#f97316','#64748b'];
 }
-
-/* ===== THEME ===== */
-function applyTheme(t) {
-  if (t === 'dark') { document.documentElement.setAttribute('data-theme','dark'); $('tbtn').textContent='☀️'; }
-  else { document.documentElement.removeAttribute('data-theme'); $('tbtn').textContent='🌙'; }
-}
-function toggleTheme() {
-  const cur = isDark() ? 'dark' : 'light';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  try { localStorage.setItem('dash_theme', next); } catch(e) {}
-  applyTheme(next);
-  if (D) renderAll();
-}
-(function() {
-  let t = 'light';
-  try { t = localStorage.getItem('dash_theme') || 'light'; } catch(e) {}
-  applyTheme(t);
-})();
 
 /* ===== TABS ===== */
 function sw(tab) {
@@ -683,6 +678,12 @@ function calClick(key) {
 }
 
 load();
+</script>
+<script>
+SurfAdmin.initTheme('themebtn');
+document.getElementById('themebtn').addEventListener('click', function(){
+  if (D) renderAll();
+});
 </script>
 </body>
 </html>"""

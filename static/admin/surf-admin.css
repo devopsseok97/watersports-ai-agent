@@ -97,6 +97,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sf-modal { width: min(680px, 100%); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; background: var(--sf-surface); border-radius: 12px; border: 1px solid var(--sf-line); }
 .sf-modal__head { padding: 16px 18px; border-bottom: 1px solid var(--sf-line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .sf-modal__body { padding: 16px 18px; overflow: auto; }
+.sf-login { min-height: 100svh; display: grid; place-items: center; padding: 24px; background: var(--sf-navy); }
+.sf-login-card { width: min(380px, 100%); background: var(--sf-surface); border: 1px solid var(--sf-line); border-radius: 12px; padding: 28px; box-shadow: 0 24px 70px rgba(0,0,0,.32); }
+.sf-login-brand { margin-bottom: 22px; }
+.sf-login .sf-brand { color: var(--sf-ink); }
+.sf-login .sf-brand small { color: var(--sf-muted); }
+.sf-login-form { display: grid; gap: 14px; }
+.sf-check { display: flex; align-items: center; gap: 9px; color: var(--sf-muted); font-weight: 750; font-size: 14px; }
+.error { background: rgba(217,74,58,.1); border: 1px solid rgba(217,74,58,.28); color: var(--sf-red); border-radius: 8px; padding: 11px 12px; margin-bottom: 14px; }
 
 @media (max-width: 820px) {
   .sf-app { display: block; }

@@ -121,6 +121,7 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>예약 관리</title>
 <style>
   :root {
@@ -296,24 +297,27 @@ ADMIN_HTML = """<!DOCTYPE html>
     .r-acts button { font-size:21px; padding:4px 3px; min-width:34px; min-height:38px; }
   }
   @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
-</style></head>
+</style><script src="/static/admin/surf-admin.js"></script></head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">🏄 서퍼스트<span>관리자</span></div>
-    <div class="htools">
-      <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
-      <a href="/admin/logout" class="logoutbtn">로그아웃</a>
-    </div>
-  </div>
-  <nav>
-    <a href="/admin/">🏠 홈</a>
-    <a href="/availability/admin" class="active">📅 예약</a>
-    <a href="/photos/admin">📸 사진</a>
-    <a href="/dashboard/">📊 분석</a>
-  </nav>
-</header>
-<main>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/">홈</a>
+      <a class="sf-nav__link" href="/availability/admin" aria-current="page">예약</a>
+      <a class="sf-nav__link" href="/photos/admin">사진</a>
+      <a class="sf-nav__link" href="/dashboard/">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
   <div class="datebar">
     <button class="quick" onclick="shiftDay(-1)" style="font-size:20px;padding:10px 14px;">‹</button>
     <input type="date" id="date">
@@ -395,6 +399,8 @@ ADMIN_HTML = """<!DOCTYPE html>
     <div id="list"></div>
   </div>
 </main>
+  </div>
+</div>
 
 <div class="modal-bg" id="editmodal" onclick="if(event.target===this)closeEdit()">
   <div class="modal">
@@ -484,19 +490,6 @@ const PRICE_MAP = {
   'E포일':        '렌탈 8만원 / 강습포함 15만원 (1인)',
   '펌핑포일':     '렌탈 7만원 / 강습포함 10만원 (1인)',
 };
-
-/* ===== 테마 ===== */
-function applyTheme(t){
-  if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); $('themebtn').textContent='☀️'; }
-  else { document.documentElement.removeAttribute('data-theme'); $('themebtn').textContent='🌙'; }
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme')==='dark' ? 'dark':'light';
-  const next = cur==='dark' ? 'light':'dark';
-  try{ localStorage.setItem('dash_theme', next); }catch(e){}
-  applyTheme(next);
-}
-(function(){ let t='light'; try{ t=localStorage.getItem('dash_theme')||'light'; }catch(e){} applyTheme(t); })();
 
 function setDay(offset){
   const d = new Date();
@@ -801,5 +794,6 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); clo
 
 init();
 </script>
+<script>SurfAdmin.initTheme('themebtn');</script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body></html>"""

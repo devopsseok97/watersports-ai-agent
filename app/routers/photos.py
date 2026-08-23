@@ -318,6 +318,7 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/admin/surf-admin.css">
 <title>서퍼스트 관리자 · 사진</title>
 <style>
   :root {
@@ -385,23 +386,27 @@ ADMIN_HTML = """<!DOCTYPE html>
     .delbtn { min-height:44px; }
     button { min-height:44px; }
   }
-</style></head>
+</style><script src="/static/admin/surf-admin.js"></script></head>
 <body>
-<header>
-  <div class="htop">
-    <div class="brand">🏄 서퍼스트<span>관리자</span></div>
-    <div class="htools">
-      <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="화면 톤 전환">🌙</button>
-      <a href="/admin/logout" class="logoutbtn">로그아웃</a>
-    </div>
-  </div>
-  <nav>
-    <a href="/admin/">🏠 홈</a>
-    <a href="/availability/admin">📅 예약</a>
-    <a href="/photos/admin" class="active">📸 사진</a>
-  </nav>
-</header>
-<main>
+<div class="sf-app">
+  <aside class="sf-sidebar">
+    <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
+    <nav class="sf-nav" aria-label="관리자 메뉴">
+      <a class="sf-nav__link" href="/admin/">홈</a>
+      <a class="sf-nav__link" href="/availability/admin">예약</a>
+      <a class="sf-nav__link" href="/photos/admin" aria-current="page">사진</a>
+      <a class="sf-nav__link" href="/dashboard/">분석</a>
+    </nav>
+  </aside>
+  <div class="sf-main">
+    <header class="sf-topbar">
+      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-actions">
+        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
+        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+      </div>
+    </header>
+    <main class="sf-page">
   <div class="new">
     <div class="row">
       <input id="memo" placeholder="메모 (예: 6/4 오전 데패강 김OO님)">
@@ -411,22 +416,12 @@ ADMIN_HTML = """<!DOCTYPE html>
   </div>
   <div id="list"><div class="empty">불러오는 중...</div></div>
 </main>
+  </div>
+</div>
 <script>
 const base = location.origin;
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmt(ts){ if(!ts) return '-'; return new Date(ts).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-
-function applyTheme(t){
-  if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); document.getElementById('themebtn').textContent='☀️'; }
-  else { document.documentElement.removeAttribute('data-theme'); document.getElementById('themebtn').textContent='🌙'; }
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
-  const next = cur==='dark'?'light':'dark';
-  try{ localStorage.setItem('dash_theme', next); }catch(e){}
-  applyTheme(next);
-}
-(function(){ let t='light'; try{ t=localStorage.getItem('dash_theme')||'light'; }catch(e){} applyTheme(t); })();
 
 async function createAlbum(){
   const memo = document.getElementById('memo').value;
@@ -505,5 +500,6 @@ async function uploadFiles(code, files){
 }
 load();
 </script>
+<script>SurfAdmin.initTheme('themebtn');</script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body></html>"""
