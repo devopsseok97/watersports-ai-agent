@@ -83,17 +83,21 @@ async def get_recent_conversations(limit: int = 100) -> list[dict]:
     return res.data or []
 
 
-async def get_booking_intents(limit: int = 100) -> list[dict]:
+async def get_booking_intents(limit: int = 100, recent_days: int | None = 7) -> list[dict]:
     """예약 의향 고객 대화만 조회 (최신순)"""
+    from datetime import datetime, timedelta, timezone
+
     client = await get_supabase()
-    res = (
-        await client.table("conversations")
+    query = (
+        client.table("conversations")
         .select("*")
         .eq("is_booking_intent", True)
         .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
     )
+    if recent_days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=recent_days)
+        query = query.gte("created_at", cutoff.isoformat())
+    res = await query.limit(limit).execute()
     return res.data or []
 
 

@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.routers import admin, availability, dashboard, photos
+from app.services import db
 
 
 client = TestClient(app)
@@ -13,6 +14,9 @@ def test_shared_admin_css_served():
     assert response.status_code == 200
     assert "--sf-river" in response.text
     assert ".sf-app" in response.text
+    assert ".sf-command-strip" in response.text
+    assert ".sf-metric--attention" in response.text
+    assert ".sf-metric--money" in response.text
 
 
 def test_shared_admin_js_served():
@@ -97,7 +101,7 @@ def test_sidebar_nav_is_protected_from_legacy_inline_nav_rules():
     css = client.get("/static/admin/surf-admin.css").text
     assert ".sf-sidebar .sf-nav { padding: 0; overflow: visible; }" in css
     assert ".sf-sidebar .sf-nav__link { background: transparent; border: 0; text-align: left; }" in css
-    assert ".sf-sidebar .sf-nav__link[aria-current=\"page\"] { background: rgba(255,255,255,.12); color: #fff; }" in css
+    assert ".sf-sidebar .sf-nav__link[aria-current=\"page\"] { background: #ffffff; color: var(--sf-navy); }" in css
 
 
 def test_admin_home_has_operations_console_regions(monkeypatch):
@@ -113,6 +117,24 @@ def test_admin_home_has_operations_console_regions(monkeypatch):
         assert marker in response.text
     assert "오늘 운영" in response.text
     assert "예약 추가" in response.text
+    assert "id=\"fresh-intents-note\"" in response.text
+    assert "최근 7일" in response.text
+    assert "sf-command-strip" in response.text
+    assert "sf-metric--attention" in response.text
+    assert "sf-metric--money" in response.text
+
+
+def test_admin_home_filters_stale_booking_intents_from_visible_work_queue():
+    assert "const INTENT_TTL_DAYS = 7;" in admin.DASHBOARD_HTML
+    assert "function freshBookingIntents(rows){" in admin.DASHBOARD_HTML
+    assert "const intents=freshBookingIntents(rawIntents);" in admin.DASHBOARD_HTML
+    assert "document.getElementById('fresh-intents-note').textContent='최근 7일 문의만 표시';" in admin.DASHBOARD_HTML
+
+
+def test_booking_intent_api_uses_recent_window_contract():
+    assert admin.__dict__.get("BOOKING_INTENT_RECENT_DAYS") == 7
+    assert "BOOKING_INTENT_RECENT_DAYS" in admin.api_intents.__code__.co_names
+    assert "recent_days" in db.get_booking_intents.__code__.co_varnames
 
 
 def test_admin_home_today_metric_targets_today_reservations_modal():

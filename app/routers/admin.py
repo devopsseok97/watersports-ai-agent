@@ -25,6 +25,7 @@ from app.services import availability as av
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+BOOKING_INTENT_RECENT_DAYS = 7
 
 
 def require_admin(asess: str | None = Cookie(default=None)):
@@ -87,7 +88,7 @@ async def api_stats(_=Depends(require_admin)):
 @router.get("/api/intents")
 async def api_intents(_=Depends(require_admin)):
     try:
-        return await get_booking_intents(limit=100)
+        return await get_booking_intents(limit=100, recent_days=BOOKING_INTENT_RECENT_DAYS)
     except Exception as e:
         logger.error(f"intents 조회 실패: {e}")
         return []
@@ -461,26 +462,31 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
+      <div class="sf-command-strip" aria-label="운영 요약">
+        <div><b>오늘 현장 우선순위</b><span>입금대기, 오늘 방문, 최근 예약문의를 먼저 처리하세요.</span></div>
+        <div class="sf-command-strip__meta" id="fresh-intents-note">최근 7일 문의만 표시</div>
+      </div>
+
       <div class="sf-card-grid ops-metrics">
-        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('today-reservations')">
+        <button class="sf-metric sf-metric--clickable sf-metric--hero" type="button" onclick="openCard('today-reservations')">
           <div class="sf-metric__label">오늘 방문</div>
           <div class="sf-metric__value" id="s-today-ppl">-</div>
           <div class="sf-metric__note" id="s-today-rev">-</div>
         </button>
-        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('revenue')">
+        <button class="sf-metric sf-metric--clickable sf-metric--money" type="button" onclick="openCard('revenue')">
           <div class="sf-metric__label">이번 달 수입</div>
           <div class="sf-metric__value money" id="s-revenue">-</div>
           <div class="sf-metric__note" id="s-month-ppl">-</div>
         </button>
-        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('pending')">
+        <button class="sf-metric sf-metric--clickable sf-metric--attention" type="button" onclick="openCard('pending')">
           <div class="sf-metric__label">입금대기</div>
           <div class="sf-metric__value" id="s-pending">-</div>
           <div class="sf-metric__note" id="s-pending-sub">-</div>
         </button>
-        <button class="sf-metric sf-metric--clickable" type="button" onclick="openCard('intents')">
+        <button class="sf-metric sf-metric--clickable sf-metric--signal" type="button" onclick="openCard('intents')">
           <div class="sf-metric__label">예약문의</div>
           <div class="sf-metric__value" id="s-intents">-</div>
-          <div class="sf-metric__note">최근 의향 고객</div>
+          <div class="sf-metric__note">최근 7일 의향 고객</div>
         </button>
       </div>
 
@@ -532,6 +538,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <script>
 /* ===== 차트 ===== */
 let _mChart=null, _pChart=null;
+const INTENT_TTL_DAYS = 7;
 
 function buildCharts(list){
   const monthCanvas=document.getElementById('monthChart');
@@ -636,6 +643,14 @@ function todayReservations(list){
   const today=todayKey();
   return (list||[]).filter(r=>r.slot_date===today).sort((a,b)=>String(a.time_slot||'').localeCompare(String(b.time_slot||'')));
 }
+function freshBookingIntents(rows){
+  const cutoff = Date.now() - INTENT_TTL_DAYS * 24 * 60 * 60 * 1000;
+  return (rows||[]).filter(r=>{
+    if(!r.created_at) return true;
+    const ts = Date.parse(r.created_at);
+    return Number.isNaN(ts) || ts >= cutoff;
+  });
+}
 
 async function loadAll(){
   try {
@@ -646,7 +661,7 @@ async function loadAll(){
       fetch('api/reservation-stats').then(r=>r.json()),
       fetch('api/reservations').then(r=>r.json()),
     ]);
-    const intents=Array.isArray(rawIntents)?rawIntents:[];
+    const intents=freshBookingIntents(rawIntents);
     const convos=Array.isArray(rawConvos)?rawConvos:[];
     const resList=Array.isArray(rawResList)?rawResList:[];
     window._convosAll=convos||[];
@@ -657,6 +672,7 @@ async function loadAll(){
     buildCharts(window._resList);
 
     document.getElementById('today-label').textContent=SurfAdmin.todayLabel()+' 기준';
+    document.getElementById('fresh-intents-note').textContent='최근 7일 문의만 표시';
     document.getElementById('s-today-ppl').textContent=(resStats.today_people??0)+'명';
     document.getElementById('s-today-rev').textContent=SurfAdmin.won(resStats.today_revenue);
     document.getElementById('s-revenue').textContent=SurfAdmin.won(resStats.month_revenue);
