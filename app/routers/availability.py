@@ -121,7 +121,7 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homealigned">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homemobile">
 <title>예약 관리</title>
 <style>
   :root {

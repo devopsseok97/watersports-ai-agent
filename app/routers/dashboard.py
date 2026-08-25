@@ -144,7 +144,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homealigned">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homemobile">
 <title>서퍼스트 · 분석</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/static/admin/surf-admin.js"></script>
