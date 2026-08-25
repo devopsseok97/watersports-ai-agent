@@ -54,7 +54,7 @@ def admin_cookie(monkeypatch):
 def test_authenticated_admin_pages_reference_shared_assets(monkeypatch, path):
     response = client.get(path, cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
-    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatcompact">' in response.text
+    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homegrid">' in response.text
     assert '<script src="/static/admin/surf-admin.js"></script>' in response.text
 
 
@@ -70,7 +70,7 @@ def test_login_page_uses_surfirst_console_copy():
     response = client.get("/admin/login")
     assert response.status_code == 200
     assert "서퍼스트 운영 콘솔" in response.text
-    assert "/static/admin/surf-admin.css?v=20260825-seatcompact" in response.text
+    assert "/static/admin/surf-admin.css?v=20260825-homegrid" in response.text
 
 
 def test_touch_targets_keep_40px_minimums():
@@ -122,6 +122,7 @@ def test_admin_home_has_operations_console_regions(monkeypatch):
     assert "sf-command-strip" in response.text
     assert "sf-metric--attention" in response.text
     assert "sf-metric--money" in response.text
+    assert '<body class="sf-admin-home">' in response.text
 
 
 def test_admin_home_filters_stale_booking_intents_from_visible_work_queue():
@@ -141,6 +142,18 @@ def test_admin_home_today_metric_targets_today_reservations_modal():
     assert """onclick="openCard('today-reservations')\"""" in admin.DASHBOARD_HTML
     assert "if(type==='today-reservations'){" in admin.DASHBOARD_HTML
     assert "오늘 예약" in admin.DASHBOARD_HTML
+
+
+def test_admin_home_spacing_uses_consistent_mobile_grid_contract():
+    css = client.get("/static/admin/surf-admin.css").text
+    assert ".sf-admin-home .sf-page { padding: 20px; }" in css
+    assert ".sf-admin-home .sf-page-head { margin-bottom: 12px; }" in css
+    assert ".sf-admin-home .sf-command-strip { margin: 0 0 12px; padding: 12px; }" in css
+    assert ".sf-admin-home .ops-metrics { gap: 10px; }" in css
+    assert ".sf-admin-home .ops-layout { gap: 12px; margin-top: 12px; align-items: start; }" in css
+    assert ".sf-admin-home .ops-layout > section:nth-child(3), .sf-admin-home .ops-layout > section:nth-child(4) { min-height: 0; }" in css
+    assert ".sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }" in css
+    assert ".sf-admin-home .sf-metric { min-height: 92px; padding: 11px; }" in css
 
 
 def test_admin_home_timeline_uses_explicit_status_mapping():

@@ -99,6 +99,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sf-metric--clickable:hover { border-color: var(--sf-river); }
 .ops-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 14px; margin-top: 14px; }
 .ops-layout > section:nth-child(3), .ops-layout > section:nth-child(4) { min-height: 260px; }
+.sf-admin-home .sf-page { padding: 20px; }
+.sf-admin-home .sf-page-head { margin-bottom: 12px; }
+.sf-admin-home .sf-command-strip { margin: 0 0 12px; padding: 12px; }
+.sf-admin-home .ops-metrics { gap: 10px; }
+.sf-admin-home .sf-metric { min-height: 104px; padding: 13px; }
+.sf-admin-home .sf-metric__value { margin-top: 8px; font-size: 30px; }
+.sf-admin-home .sf-metric__value.money { font-size: 24px; }
+.sf-admin-home .sf-metric__note { margin-top: 7px; }
+.sf-admin-home .ops-layout { gap: 12px; margin-top: 12px; align-items: start; }
+.sf-admin-home .ops-layout > section:nth-child(3), .sf-admin-home .ops-layout > section:nth-child(4) { min-height: 0; }
 .ops-alerts { display: grid; gap: 8px; }
 .ops-alert { width: 100%; text-align: left; border: 1px solid var(--sf-line); border-left: 4px solid var(--sf-river); border-radius: 8px; background: var(--sf-surface-raised); color: var(--sf-ink); padding: 12px; display: flex; justify-content: space-between; gap: 10px; text-decoration: none; cursor: pointer; }
 .ops-alert b { display: block; }
@@ -192,6 +202,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sf-page { padding: 14px 12px 22px; }
   .sf-page-head { align-items: flex-start; flex-direction: column; }
   .sf-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sf-admin-home .sf-page { padding: 12px; }
+  .sf-admin-home .sf-page-head { gap: 10px; margin-bottom: 10px; }
+  .sf-admin-home .sf-command-strip { align-items: flex-start; flex-direction: column; gap: 4px; margin-bottom: 10px; padding: 10px 11px; }
+  .sf-admin-home .sf-command-strip__meta { white-space: normal; }
+  .sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sf-admin-home .sf-metric { min-height: 92px; padding: 11px; }
+  .sf-admin-home .sf-metric__value { margin-top: 7px; font-size: 28px; }
+  .sf-admin-home .sf-metric__value.money { font-size: 22px; }
+  .sf-admin-home .sf-metric__note { margin-top: 6px; font-size: 11px; }
+  .sf-admin-home .ops-layout { gap: 10px; margin-top: 10px; }
 }
 
 @media (max-width: 920px) {

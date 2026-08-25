@@ -192,7 +192,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#09090d">
 <title>서퍼스트 관리자 로그인</title>
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatcompact">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homegrid">
 </head>
 <body class="sf-login">
 <main class="sf-login-card">
@@ -224,7 +224,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatcompact">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homegrid">
 <title>서퍼스트 관리자 · 홈</title>
 <style>
   :root {
@@ -429,7 +429,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/static/admin/surf-admin.js"></script>
 </head>
-<body>
+<body class="sf-admin-home">
 <div class="sf-app">
   <aside class="sf-sidebar">
     <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
