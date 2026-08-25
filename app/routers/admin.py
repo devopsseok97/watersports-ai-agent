@@ -192,7 +192,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#09090d">
 <title>서퍼스트 관리자 로그인</title>
-<link rel="stylesheet" href="/static/admin/surf-admin.css">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatgrid">
 </head>
 <body class="sf-login">
 <main class="sf-login-card">
@@ -224,7 +224,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatgrid">
 <title>서퍼스트 관리자 · 홈</title>
 <style>
   :root {

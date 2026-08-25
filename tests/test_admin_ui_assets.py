@@ -54,7 +54,7 @@ def admin_cookie(monkeypatch):
 def test_authenticated_admin_pages_reference_shared_assets(monkeypatch, path):
     response = client.get(path, cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
-    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css">' in response.text
+    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-seatgrid">' in response.text
     assert '<script src="/static/admin/surf-admin.js"></script>' in response.text
 
 
@@ -70,7 +70,7 @@ def test_login_page_uses_surfirst_console_copy():
     response = client.get("/admin/login")
     assert response.status_code == 200
     assert "서퍼스트 운영 콘솔" in response.text
-    assert "/static/admin/surf-admin.css" in response.text
+    assert "/static/admin/surf-admin.css?v=20260825-seatgrid" in response.text
 
 
 def test_touch_targets_keep_40px_minimums():
