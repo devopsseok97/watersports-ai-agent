@@ -187,6 +187,14 @@ def test_availability_admin_html_contains_summary_status_contract():
         assert marker in availability.ADMIN_HTML
 
 
+def test_mobile_seat_board_wraps_without_horizontal_scroll():
+    css = client.get("/static/admin/surf-admin.css").text
+    assert ".seat-board { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }" in css
+    assert ".seat-card { min-width: 0; min-height: 104px; }" in css
+    mobile_block = css.split("@media (max-width: 640px)", 1)[1].split("@media (max-width: 480px)", 1)[0]
+    assert ".seat-board { display: flex; overflow-x: auto;" not in mobile_block
+
+
 def test_availability_admin_html_contains_list_badges_and_actions_contract():
     for marker in [
         '<span class="sf-status sf-status--ok">예약</span>',

@@ -201,8 +201,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 640px) {
   .date-workbar { flex-wrap: wrap; }
   .date-workbar input[type="date"] { flex: 1; min-width: 160px; }
-  .seat-board { display: flex; overflow-x: auto; padding-bottom: 4px; }
-  .seat-card { min-width: 132px; }
+  .seat-board { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
+  .seat-card { min-width: 0; min-height: 104px; }
+  .seat-card__top { align-items: flex-start; flex-direction: column; }
+  .seat-card__big { font-size: 22px; }
   .res-main { grid-template-columns: 54px minmax(0, 1fr) 76px; }
   .r-prog, .r-amt { display: none; }
   .album-card { grid-template-columns: 1fr; }
