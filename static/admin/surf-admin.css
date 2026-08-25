@@ -107,7 +107,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sf-admin-home .sf-metric__value { margin-top: 8px; font-size: 30px; }
 .sf-admin-home .sf-metric__value.money { font-size: 24px; }
 .sf-admin-home .sf-metric__note { margin-top: 7px; }
-.sf-admin-home .ops-layout { gap: 12px; margin-top: 12px; align-items: start; }
+.sf-admin-home .ops-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; align-items: start; }
+.sf-admin-home .ops-layout > .sf-panel { grid-column: span 2; }
 .sf-admin-home .ops-layout > section:nth-child(3), .sf-admin-home .ops-layout > section:nth-child(4) { min-height: 0; }
 .ops-alerts { display: grid; gap: 8px; }
 .ops-alert { width: 100%; text-align: left; border: 1px solid var(--sf-line); border-left: 4px solid var(--sf-river); border-radius: 8px; background: var(--sf-surface-raised); color: var(--sf-ink); padding: 12px; display: flex; justify-content: space-between; gap: 10px; text-decoration: none; cursor: pointer; }
@@ -211,7 +212,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sf-admin-home .sf-metric__value { margin-top: 7px; font-size: 28px; }
   .sf-admin-home .sf-metric__value.money { font-size: 22px; }
   .sf-admin-home .sf-metric__note { margin-top: 6px; font-size: 11px; }
-  .sf-admin-home .ops-layout { gap: 10px; margin-top: 10px; }
+  .sf-admin-home .ops-layout { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+  .sf-admin-home .ops-layout > .sf-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 920px) {
