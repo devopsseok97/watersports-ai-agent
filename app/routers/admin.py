@@ -192,7 +192,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#09090d">
 <title>서퍼스트 관리자 로그인</title>
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homemobile">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">
 </head>
 <body class="sf-login">
 <main class="sf-login-card">
@@ -224,7 +224,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homemobile">
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">
 <title>서퍼스트 관리자 · 홈</title>
 <style>
   :root {
@@ -473,11 +473,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="sf-metric__value" id="s-today-ppl">-</div>
           <div class="sf-metric__note" id="s-today-rev">-</div>
         </button>
-        <button class="sf-metric sf-metric--clickable sf-metric--money" type="button" onclick="openCard('revenue')">
-          <div class="sf-metric__label">이번 달 수입</div>
-          <div class="sf-metric__value money" id="s-revenue">-</div>
-          <div class="sf-metric__note" id="s-month-ppl">-</div>
-        </button>
         <button class="sf-metric sf-metric--clickable sf-metric--attention" type="button" onclick="openCard('pending')">
           <div class="sf-metric__label">입금대기</div>
           <div class="sf-metric__value" id="s-pending">-</div>
@@ -487,6 +482,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <div class="sf-metric__label">예약문의</div>
           <div class="sf-metric__value" id="s-intents">-</div>
           <div class="sf-metric__note">최근 7일 의향 고객</div>
+        </button>
+        <button class="sf-metric sf-metric--clickable sf-metric--money" type="button" onclick="openCard('revenue')">
+          <div class="sf-metric__label">이번 달 수입</div>
+          <div class="sf-metric__value money" id="s-revenue">-</div>
+          <div class="sf-metric__note" id="s-month-ppl">-</div>
         </button>
       </div>
 

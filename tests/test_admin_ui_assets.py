@@ -54,7 +54,7 @@ def admin_cookie(monkeypatch):
 def test_authenticated_admin_pages_reference_shared_assets(monkeypatch, path):
     response = client.get(path, cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
-    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homemobile">' in response.text
+    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">' in response.text
     assert '<script src="/static/admin/surf-admin.js"></script>' in response.text
 
 
@@ -70,7 +70,7 @@ def test_login_page_uses_surfirst_console_copy():
     response = client.get("/admin/login")
     assert response.status_code == 200
     assert "서퍼스트 운영 콘솔" in response.text
-    assert "/static/admin/surf-admin.css?v=20260825-homemobile" in response.text
+    assert "/static/admin/surf-admin.css?v=20260825-homeclean" in response.text
 
 
 def test_touch_targets_keep_40px_minimums():
@@ -144,6 +144,13 @@ def test_admin_home_today_metric_targets_today_reservations_modal():
     assert "오늘 예약" in admin.DASHBOARD_HTML
 
 
+def test_admin_home_mobile_metric_order_prioritizes_field_work():
+    html = admin.DASHBOARD_HTML
+    ordered_labels = ["오늘 방문", "입금대기", "예약문의", "이번 달 수입"]
+    positions = [html.index(f'<div class="sf-metric__label">{label}</div>') for label in ordered_labels]
+    assert positions == sorted(positions)
+
+
 def test_admin_home_spacing_uses_consistent_mobile_grid_contract():
     css = client.get("/static/admin/surf-admin.css").text
     assert ".sf-admin-home .sf-page { padding: 20px; }" in css
@@ -153,12 +160,14 @@ def test_admin_home_spacing_uses_consistent_mobile_grid_contract():
     assert ".sf-admin-home .ops-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; align-items: start; }" in css
     assert ".sf-admin-home .ops-layout > .sf-panel { grid-column: span 2; }" in css
     assert ".sf-admin-home .ops-layout > section:nth-child(3), .sf-admin-home .ops-layout > section:nth-child(4) { min-height: 0; }" in css
-    assert ".sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }" in css
-    assert ".sf-admin-home .sf-metric { min-height: 92px; padding: 11px; }" in css
-    assert ".sf-admin-home .ops-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }" in css
-    assert ".sf-admin-home .ops-layout > .sf-panel { grid-column: auto; }" in css
-    assert ".sf-admin-home .sf-panel { padding: 11px; }" in css
-    assert ".sf-admin-home .sf-section-title { margin-bottom: 8px; font-size: 13px; }" in css
+    assert ".sf-admin-home .sf-page { padding: 10px 10px 18px; }" in css
+    assert ".sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }" in css
+    assert ".sf-admin-home .sf-metric { min-height: 86px; padding: 10px; border-radius: 8px; }" in css
+    assert ".sf-admin-home .ops-layout { grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }" in css
+    assert ".sf-admin-home .ops-layout > .sf-panel { grid-column: 1 / -1; }" in css
+    assert ".sf-admin-home .sf-panel { padding: 12px; border-radius: 8px; }" in css
+    assert ".sf-admin-home .sf-section-title { margin-bottom: 9px; font-size: 14px; }" in css
+    assert ".sf-admin-home .sf-empty { padding: 14px; border-radius: 8px; }" in css
 
 
 def test_admin_home_timeline_uses_explicit_status_mapping():

@@ -203,19 +203,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sf-page { padding: 14px 12px 22px; }
   .sf-page-head { align-items: flex-start; flex-direction: column; }
   .sf-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sf-admin-home .sf-page { padding: 12px; }
-  .sf-admin-home .sf-page-head { gap: 10px; margin-bottom: 10px; }
-  .sf-admin-home .sf-command-strip { align-items: flex-start; flex-direction: column; gap: 4px; margin-bottom: 10px; padding: 10px 11px; }
+  .sf-admin-home .sf-page { padding: 10px 10px 18px; }
+  .sf-admin-home .sf-page-head { gap: 8px; margin-bottom: 9px; }
+  .sf-admin-home .sf-page-title { font-size: 20px; }
+  .sf-admin-home .sf-page-sub { margin-top: 4px; font-size: 12px; }
+  .sf-admin-home .sf-page-head .sf-actions { width: 100%; gap: 7px; }
+  .sf-admin-home .sf-page-head .sf-actions .sf-btn { flex: 1; min-height: 38px; padding: 0 10px; }
+  .sf-admin-home .sf-command-strip { align-items: flex-start; flex-direction: column; gap: 3px; margin-bottom: 8px; padding: 9px 10px; border-left-width: 4px; }
+  .sf-admin-home .sf-command-strip b { font-size: 13px; }
+  .sf-admin-home .sf-command-strip span, .sf-admin-home .sf-command-strip__meta { font-size: 11px; line-height: 1.35; }
   .sf-admin-home .sf-command-strip__meta { white-space: normal; }
-  .sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .sf-admin-home .sf-metric { min-height: 92px; padding: 11px; }
-  .sf-admin-home .sf-metric__value { margin-top: 7px; font-size: 28px; }
-  .sf-admin-home .sf-metric__value.money { font-size: 22px; }
-  .sf-admin-home .sf-metric__note { margin-top: 6px; font-size: 11px; }
-  .sf-admin-home .ops-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
-  .sf-admin-home .ops-layout > .sf-panel { grid-column: auto; }
-  .sf-admin-home .sf-panel { padding: 11px; }
-  .sf-admin-home .sf-section-title { margin-bottom: 8px; font-size: 13px; }
+  .sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .sf-admin-home .sf-metric { min-height: 86px; padding: 10px; border-radius: 8px; }
+  .sf-admin-home .sf-metric__label { font-size: 11px; }
+  .sf-admin-home .sf-metric__value { margin-top: 6px; font-size: 26px; }
+  .sf-admin-home .sf-metric__value.money { font-size: 20px; }
+  .sf-admin-home .sf-metric__note { margin-top: 5px; font-size: 10px; line-height: 1.25; }
+  .sf-admin-home .ops-layout { grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+  .sf-admin-home .ops-layout > .sf-panel { grid-column: 1 / -1; }
+  .sf-admin-home .sf-panel { padding: 12px; border-radius: 8px; }
+  .sf-admin-home .sf-section-title { margin-bottom: 9px; font-size: 14px; }
+  .sf-admin-home .sf-empty { padding: 14px; border-radius: 8px; }
 }
 
 @media (max-width: 920px) {
