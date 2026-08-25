@@ -201,10 +201,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 640px) {
   .date-workbar { flex-wrap: wrap; }
   .date-workbar input[type="date"] { flex: 1; min-width: 160px; }
-  .seat-board { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
-  .seat-card { min-width: 0; min-height: 104px; }
-  .seat-card__top { align-items: flex-start; flex-direction: column; }
-  .seat-card__big { font-size: 22px; }
+  .seat-board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: visible; padding-bottom: 0; }
+  .seat-card { min-width: 0; min-height: 86px; padding: 7px 7px 6px; border-radius: 9px; }
+  .seat-card__top { align-items: center; flex-direction: row; gap: 4px; font-size: 10px; }
+  .seat-card__top span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seat-card__top .sf-status { flex-shrink: 0; padding: 2px 5px; font-size: 10px; }
+  .seat-card__time { margin-top: 5px; font-size: 12px; font-weight: 900; }
+  .seat-card__big { margin-top: 4px; font-size: 21px; }
+  .seat-card__big small { font-size: 12px !important; }
+  .seat-card__meta { margin-top: 4px; font-size: 10px; }
   .res-main { grid-template-columns: 54px minmax(0, 1fr) 76px; }
   .r-prog, .r-amt { display: none; }
   .album-card { grid-template-columns: 1fr; }
