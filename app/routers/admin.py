@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 BOOKING_INTENT_RECENT_DAYS = 7
 
-CSS_VER = "20260826-redesign"
+CSS_VER = "20260826-navfix"
 
 
 def require_admin(asess: str | None = Cookie(default=None)):

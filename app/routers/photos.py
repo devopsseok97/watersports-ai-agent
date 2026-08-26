@@ -301,7 +301,7 @@ h1{{font-size:20px;margin:0 0 10px;}}p{{color:#8b98a5;font-size:14px;margin:0;}}
 
 # ---------------- 관리자 페이지 ----------------
 
-CSS_VER = "20260826-redesign"
+CSS_VER = "20260826-navfix"
 
 
 @router.get("/admin", response_class=HTMLResponse)

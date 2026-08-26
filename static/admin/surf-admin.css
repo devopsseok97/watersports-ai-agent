@@ -85,7 +85,17 @@ button:focus-visible, a:focus-visible {
   flex-direction: column;
   padding-bottom: calc(var(--sf-nav-height) + env(safe-area-inset-bottom, 0px));
 }
-.sf-sidebar { display: none; }
+/* 모바일에서는 .sf-sidebar를 통째로 숨기면 그 안의 .sf-nav(하단 탭바)까지 사라진다.
+   대신 사이드바 껍데기만 시각적으로 걷어내고, 안의 nav는 fixed로 아래에 붙게 둔다. */
+.sf-sidebar {
+  background: transparent;
+  padding: 0;
+  border: 0;
+  position: static;
+  height: auto;
+  display: block;
+}
+.sf-brand { display: none; }
 
 /* 모바일: 하단 탭바 */
 .sf-nav {
@@ -122,7 +132,6 @@ button:focus-visible, a:focus-visible {
 }
 .sf-nav__link[aria-current="page"] { color: var(--sf-river); }
 
-.sf-brand { display: none; }
 .sf-mobile-brand { display: none; }
 
 /* 상단 바 */

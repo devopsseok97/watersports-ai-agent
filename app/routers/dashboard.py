@@ -128,7 +128,7 @@ async def api_analytics(_=Depends(require_admin)):
     }
 
 
-CSS_VER = "20260826-redesign"
+CSS_VER = "20260826-navfix"
 
 
 @router.get("", response_class=HTMLResponse)

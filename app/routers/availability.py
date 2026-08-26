@@ -104,7 +104,7 @@ async def set_status(
     return {"ok": True, "reservation": row}
 
 
-CSS_VER = "20260826-redesign"
+CSS_VER = "20260826-navfix"
 
 
 @router.get("/admin", response_class=HTMLResponse)
