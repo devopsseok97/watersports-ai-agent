@@ -104,11 +104,14 @@ async def set_status(
     return {"ok": True, "reservation": row}
 
 
+CSS_VER = "20260826-redesign"
+
+
 @router.get("/admin", response_class=HTMLResponse)
 async def availability_admin(asess: str | None = Cookie(default=None)):
     if not verify_session(asess):
         return RedirectResponse(url="/admin/login", status_code=302)
-    return HTMLResponse(ADMIN_HTML)
+    return HTMLResponse(ADMIN_HTML.replace("{CSS_VER}", CSS_VER))
 
 
 ADMIN_HTML = """<!DOCTYPE html>
@@ -121,200 +124,143 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">
-<title>예약 관리</title>
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v={CSS_VER}">
+<title>서퍼스트 · 예약 관리</title>
 <style>
-  :root {
-    --bg:#f6f8fa; --card:#ffffff; --line:#d0d7de; --txt:#1f2328; --sub:#57606a;
-    --ok:#1a7f4f; --ok-bg:#dafbe1; --full:#d1242f; --full-bg:#ffebe9;
-    --warn:#9a6700; --warn-bg:#fff8c5; --accent:#6366f1; --accent-press:#4f46e5;
-    --field:#f6f8fa; --shadow:0 1px 3px rgba(0,0,0,.08);
-    --header-bg:rgba(255,255,255,.92);
+  /* 예약 화면 전용 */
+  .seatlegend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 10px; }
+  .seatlegend .lg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--sf-muted); font-weight: 700; }
+  .seatlegend .lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .seat-card { position: relative; overflow: hidden; }
+  .seat-card .gbar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gc, var(--sf-line)); }
+  .seat-card.grp-paddle { --gc: var(--sf-blue); }
+  .seat-card.grp-kayak  { --gc: var(--sf-purple); }
+  .seat-card.grp-wind   { --gc: var(--sf-river); }
+  .seat-card.grp-foil   { --gc: #db2777; }
+  .seat-card.grp-etc    { --gc: var(--sf-muted); }
+  .seat-card.ok   { border-color: color-mix(in srgb, var(--sf-green) 45%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-green) 6%, var(--sf-surface)); }
+  .seat-card.warn { border-color: color-mix(in srgb, var(--sf-yellow) 55%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-yellow) 8%, var(--sf-surface)); }
+  .seat-card.full { border-color: color-mix(in srgb, var(--sf-red) 55%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-red) 6%, var(--sf-surface)); }
+  .seat-card.ok .seat-card__big { color: var(--sf-green); }
+  .seat-card.warn .seat-card__big { color: #9a6d00; }
+  .seat-card.full .seat-card__big { color: var(--sf-red); }
+
+  /* 예약 목록 */
+  .pdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .res-row.tr-noshow { opacity: .5; }
+  .res-row.tr-noshow .r-name { text-decoration: line-through; }
+  .res-row.tr-canceled { opacity: .5; }
+  .res-row.tr-canceled .r-name { text-decoration: line-through; }
+  .res-row.tr-pending { background: color-mix(in srgb, var(--sf-yellow) 6%, transparent); }
+  .res-row.tr-deposited { background: color-mix(in srgb, var(--sf-green) 6%, transparent); }
+  .r-acts { display: flex; gap: 2px; justify-content: flex-end; }
+  .r-acts button {
+    background: transparent; border: 1px solid transparent;
+    color: var(--sf-muted); font-size: 15px; padding: 4px 8px;
+    border-radius: 8px; min-width: 36px; min-height: 36px; cursor: pointer;
   }
-  [data-theme="dark"] {
-    --bg:#09090d; --card:#111116; --line:#1e2028; --txt:#e4e7ef; --sub:#6b7280;
-    --ok:#34d399; --ok-bg:#06190e; --full:#f87171; --full-bg:#1a0606;
-    --warn:#fbbf24; --warn-bg:#1c1500; --accent:#818cf8; --accent-press:#6366f1;
-    --field:#0d0f14; --shadow:none;
-    --header-bg:rgba(9,9,13,.85);
+  .r-acts button:hover { color: var(--sf-ink); background: var(--sf-field); }
+  .r-acts button.primary { color: var(--sf-river); border-color: color-mix(in srgb, var(--sf-river) 40%, transparent); font-weight: 800; font-size: 12px; padding: 0 10px; }
+  .daysum {
+    text-align: right; padding: 12px 4px 2px;
+    font-size: 13px; color: var(--sf-muted); font-weight: 700;
   }
-  * { box-sizing:border-box; }
-  html { -webkit-text-size-adjust:100%; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-         background:var(--bg); color:var(--txt); font-size:17px; line-height:1.45; }
-  header { background:var(--header-bg); backdrop-filter:saturate(180%) blur(12px);
-           -webkit-backdrop-filter:saturate(180%) blur(12px);
-           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
-  .htop { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .brand { font-size:19px; font-weight:800; }
-  .brand span { color:var(--sub); font-weight:600; font-size:14px; margin-left:4px; }
-  .htools { display:flex; align-items:center; gap:6px; }
-  .themebtn { background:var(--field); border:1px solid var(--line); color:var(--txt);
-              width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:19px; padding:0;
-              display:flex; align-items:center; justify-content:center; }
-  .logoutbtn { color:var(--sub); font-size:13px; font-weight:600; text-decoration:none;
-               padding:9px 12px; border-radius:10px; background:var(--field);
-               border:1px solid var(--line); white-space:nowrap; }
-  .logoutbtn:hover { color:var(--txt); }
-  nav { display:flex; gap:6px; padding:0 12px 12px; overflow-x:auto; }
-  nav a { flex:1; text-align:center; white-space:nowrap; text-decoration:none; color:var(--sub);
-          font-size:16px; font-weight:700; padding:11px 10px; border-radius:10px; background:var(--field); border:1px solid var(--line); }
-  nav a.active { color:#fff; background:var(--accent); border-color:var(--accent); }
-  main { padding:18px; max-width:820px; margin:0 auto; }
-
-  .datebar { display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
-  input[type=date] { background:var(--field); border:1px solid var(--line); color:var(--txt);
-                     padding:12px 14px; border-radius:10px; font-size:17px; flex:1; min-width:150px; }
-  .quick { background:var(--field); color:var(--txt); border:1px solid var(--line);
-           padding:12px 16px; border-radius:10px; cursor:pointer; font-size:16px; font-weight:600; }
-  .quick:active { background:var(--accent); color:#fff; }
-
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px;
-          padding:14px; margin-bottom:12px; box-shadow:var(--shadow); }
-  .card h2 { font-size:15px; margin:0 0 10px; color:var(--sub); font-weight:700; }
-
-  /* ===== 잔여 좌석: 컴팩트 카드 ===== */
-  .seatlegend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; }
-  .seatlegend .lg { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--sub); font-weight:600; }
-  .seatlegend .lg i { width:11px; height:11px; border-radius:3px; display:inline-block; }
-  .sumgrid-legacy { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
-  .seat { position:relative; overflow:hidden; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px 8px; background:var(--field); }
-  .seat .gbar { height:4px; margin:-10px -12px 8px; background:var(--gc,#64748b); }
-  .seat .stop { font-size:12px; color:var(--gc,var(--sub)); font-weight:800; margin-bottom:1px; }
-  /* 종목별 색 (상단 띠 + 종목명) */
-  .seat.grp-paddle { --gc:#2563eb; }
-  .seat.grp-kayak  { --gc:#7c3aed; }
-  .seat.grp-wind   { --gc:#0d9488; }
-  .seat.grp-foil   { --gc:#db2777; }
-  .seat.grp-etc    { --gc:#64748b; }
-  .seat .stime { font-size:13px; font-weight:700; margin-bottom:4px; }
-  .seat .big { font-size:24px; font-weight:900; line-height:1; }
-  .seat .frac { font-size:12px; color:var(--sub); margin-top:3px; font-weight:600; }
-  .seat.ok   { border-color:var(--ok);   background:var(--ok-bg); }
-  .seat.warn { border-color:var(--warn); background:var(--warn-bg); }
-  .seat.full { border-color:var(--full); background:var(--full-bg); }
-  .seat.ok .big   { color:var(--ok); }
-  .seat.warn .big { color:var(--warn); }
-  .seat.full .big { color:var(--full); }
-  .seat.seatclick { cursor:pointer; transition:transform .1s; }
-  .seat.seatclick:active { transform:scale(.97); }
-
-  /* ===== 추가 폼 ===== */
-  .form { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .form .field { display:flex; flex-direction:column; }
-  .form label { font-size:13px; color:var(--sub); font-weight:600; margin-bottom:4px; }
-  .form select, .form input { width:100%; background:var(--field); border:1px solid var(--line);
-       color:var(--txt); padding:10px 12px; border-radius:10px; font-size:15px; }
-  .form .full { grid-column:1 / -1; }
-  .addbtn { grid-column:1 / -1; background:var(--accent); color:#fff; border:none;
-            padding:13px; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer; margin-top:2px; }
-  .addbtn:active { background:var(--accent-press); }
-
-  /* ===== 예약 목록 ===== */
-  .pdot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
-  .res-hdr { display:flex; align-items:center; padding:6px 4px 10px;
-             border-bottom:2px solid var(--line); font-size:13px; font-weight:700; color:var(--sub); }
-  .h-time { min-width:58px; }
-  .h-prog { width:130px; }
-  .h-name { flex:1; }
-  .h-amt  { width:100px; text-align:right; }
-  .h-acts { width:118px; }
-  .res-row { border-bottom:1px solid var(--line); }
-  .res-row:last-child { border-bottom:none; }
-  .res-row:hover { background:var(--field); }
-  .res-main-legacy { display:flex; align-items:center; gap:10px; padding:10px 4px; }
-  .tr-noshow { opacity:.5; }
-  .tr-noshow .r-nm { text-decoration:line-through; }
-  .tr-canceled { opacity:.45; }
-  .tr-canceled .r-nm { text-decoration:line-through; }
-  .tr-pending  { border-left:3px solid #f59e0b; padding-left:6px; background:rgba(245,158,11,.06); }
-  .tr-deposited { border-left:3px solid #10b981; padding-left:6px; background:rgba(16,185,129,.06); }
-  .r-time { min-width:52px; font-weight:900; font-size:17px; color:var(--accent); white-space:nowrap; flex-shrink:0; }
-  .r-prog { width:130px; font-size:14px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
-  .r-body { flex:1; min-width:0; }
-  .r-nm   { font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .r-meta { font-size:12px; color:var(--sub); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .r-sub  { display:none; font-size:12px; color:var(--sub); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .r-amt  { width:90px; text-align:right; flex-shrink:0; }
-  .r-amt .main-amt { font-weight:700; color:var(--ok); font-size:15px; white-space:nowrap; }
-  .r-amt .dep-amt  { font-size:12px; color:#10b981; font-weight:600; margin-top:2px; }
-  .r-acts { flex-shrink:0; white-space:nowrap; text-align:right; }
-  .r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); min-width:40px; min-height:40px; }
-  .r-acts button:active { transform:scale(1.2); }
-  .nobadge  { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--full);
-              padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
-  .pendbadge { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#f59e0b;
-               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
-  .cxbadge   { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:#64748b;
-               padding:1px 6px; border-radius:5px; margin-left:5px; vertical-align:middle; }
-  .daysum { text-align:right; padding:14px 6px 2px; font-size:16px; color:var(--sub); }
-  .daysum b { color:var(--ok); font-size:19px; font-weight:900; margin-left:6px; }
-  .daysum small { color:var(--sub); font-weight:600; font-size:13px; }
-  .empty { color:var(--sub); font-size:16px; padding:12px 0; text-align:center; }
-  .hint { color:var(--sub); font-size:14px; margin-top:14px; line-height:1.6; }
-
-  /* ===== 수정 모달 ===== */
-  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
-              align-items:flex-end; justify-content:center; z-index:100; }
-  .modal-bg.show { display:flex; }
-  .modal { background:var(--card); width:100%; max-width:560px; max-height:90vh;
-           border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; }
-  .modal-head { padding:16px 20px; border-bottom:1px solid var(--line); display:flex;
-                align-items:center; justify-content:space-between; }
-  .modal-head .t { font-size:18px; font-weight:800; }
-  .modal-head .x { background:var(--field); border:1px solid var(--line); color:var(--txt);
-                   width:40px; height:40px; border-radius:10px; font-size:20px; cursor:pointer; }
-  .modal-body { padding:18px 20px; overflow-y:auto; }
-  .savebtn { width:100%; background:var(--accent); color:#fff; border:none; padding:16px;
-             border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:6px; }
-  .savebtn:active { background:var(--accent-press); }
-  .delbtn-modal { width:100%; background:none; border:1.5px solid var(--full); color:var(--full);
-                  padding:14px; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; margin-top:8px; }
-  .delbtn-modal:active { background:var(--full); color:#fff; }
-
-  /* ===== 모바일 ===== */
-  @media (max-width:600px){
-    body { font-size:16px; }
-    main { padding:12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
-
-    /* 잔여석: 가로 스크롤 1줄 */
-    .sumgrid-legacy { display:flex; overflow-x:auto; gap:8px; padding-bottom:4px;
-               -webkit-overflow-scrolling:touch; grid-template-columns:unset; }
-    .seat { min-width:96px; flex-shrink:0; }
-
-    /* 폼: 2열 유지, 더 컴팩트 */
-    .form { grid-template-columns:1fr 1fr; gap:8px; }
-    .form label { font-size:12px; margin-bottom:3px; }
-    .form select, .form input { padding:9px 10px; font-size:14px; }
-    .addbtn { padding:12px; font-size:15px; }
-
-    /* 예약 목록 */
-    .res-hdr { display:none; }
-    .r-prog  { display:none; }
-    .r-amt   { display:none; }
-    .r-sub   { display:block; }
-    .r-acts .del-btn { display:none; }
-    .r-acts button { font-size:21px; padding:4px 3px; min-width:40px; min-height:40px; }
+  .daysum b { color: var(--sf-green); font-size: 15px; font-weight: 900; margin-left: 5px; }
+  .hint {
+    color: var(--sf-muted); font-size: 12px; margin-top: 12px;
+    line-height: 1.5;
+    padding: 10px 12px; background: var(--sf-field);
+    border-radius: 8px;
   }
-  @media (min-width:560px){ .modal-bg { align-items:center; } .modal { border-radius:18px; } }
+  #price-hint { color: var(--sf-river); font-weight: 700; font-size: 12px; margin-left: 4px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .form .field label { color: var(--sf-muted); font-size: 12px; font-weight: 800; }
+  .form .full { grid-column: 1 / -1; }
+  .form input, .form select { min-height: 40px; padding: 8px 10px; }
+  .addbtn {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    min-height: var(--sf-tap);
+    background: var(--sf-river); border: 1px solid var(--sf-river);
+    color: #fff; font-weight: 900; font-size: 14px; border-radius: 10px;
+    cursor: pointer;
+  }
+  .addbtn:hover { background: var(--sf-river-dark); border-color: var(--sf-river-dark); }
+  .savebtn {
+    width: 100%; margin-top: 6px;
+    min-height: 46px;
+    background: var(--sf-river); border: 1px solid var(--sf-river);
+    color: #fff; font-weight: 900; font-size: 14px; border-radius: 10px;
+    cursor: pointer;
+  }
+  .savebtn:hover { background: var(--sf-river-dark); border-color: var(--sf-river-dark); }
+  .delbtn-modal {
+    width: 100%; margin-top: 8px;
+    min-height: var(--sf-tap);
+    background: transparent; border: 1px solid var(--sf-red);
+    color: var(--sf-red); font-weight: 800; font-size: 13px; border-radius: 10px;
+    cursor: pointer;
+  }
+  .delbtn-modal:hover { background: var(--sf-red-soft); }
+  .modal-head .t { font-weight: 900; font-size: 15px; }
+  .modal-head .x {
+    background: transparent; border: 1px solid var(--sf-line);
+    color: var(--sf-ink); width: 40px; height: 40px;
+    border-radius: 8px; font-size: 16px; cursor: pointer;
+  }
+  .modal-head .x:hover { background: var(--sf-field); }
+
+  /* 좌석 모달 표 */
+  .restable { width: 100%; border-collapse: collapse; }
+  .restable thead th {
+    text-align: left; padding: 8px 6px; font-size: 12px;
+    color: var(--sf-muted); font-weight: 800; border-bottom: 1px solid var(--sf-line-soft);
+  }
+  .restable tbody td { padding: 10px 6px; border-bottom: 1px solid var(--sf-line-soft); font-size: 13px; }
+  .restable tbody tr:hover td { background: var(--sf-field); }
+  .tc-nm { font-weight: 800; }
+  .tc-meta { color: var(--sf-muted); font-size: 11px; margin-top: 2px; }
+  .tc-ppl { text-align: right; font-weight: 800; }
+  .tc-amt { text-align: right; }
+  .tc-amt .main-amt { color: var(--sf-green); font-weight: 800; font-size: 13px; }
+  .tc-amt .dep-amt { color: var(--sf-green); font-size: 11px; margin-top: 2px; }
+  .tc-acts { text-align: right; color: var(--sf-muted); }
+
+  .icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8;
+          stroke-linecap: round; stroke-linejoin: round; }
 </style><script src="/static/admin/surf-admin.js"></script></head>
 <body>
 <div class="sf-app">
   <aside class="sf-sidebar">
     <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
     <nav class="sf-nav" aria-label="관리자 메뉴">
-      <a class="sf-nav__link" href="/admin/">홈</a>
-      <a class="sf-nav__link" href="/availability/admin" aria-current="page">예약</a>
-      <a class="sf-nav__link" href="/photos/admin">사진</a>
-      <a class="sf-nav__link" href="/dashboard/">분석</a>
+      <a class="sf-nav__link" href="/admin/">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span>홈</span>
+      </a>
+      <a class="sf-nav__link" href="/availability/admin" aria-current="page">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>예약</span>
+      </a>
+      <a class="sf-nav__link" href="/photos/admin">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+        <span>사진</span>
+      </a>
+      <a class="sf-nav__link" href="/dashboard/">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>분석</span>
+      </a>
     </nav>
   </aside>
   <div class="sf-main">
     <header class="sf-topbar">
-      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-topbar__title">예약 관리</div>
       <div class="sf-actions">
-        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
-        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+        <button class="sf-icon-btn" id="themebtn" type="button" aria-label="테마 전환">
+          <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9 7 7 0 01-9-9z"/></svg>
+        </button>
+        <a class="sf-btn sf-btn--sm sf-btn--ghost" href="/admin/logout">로그아웃</a>
       </div>
     </header>
     <main class="sf-page">
@@ -409,7 +355,7 @@ ADMIN_HTML = """<!DOCTYPE html>
                 <input id="f_deposit" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 20000">
               </div>
               <div class="field sf-field">
-                <label>실수령 금액 (원) <span id="price-hint" style="color:var(--accent);font-weight:600;font-size:13px;margin-left:6px;"></span></label>
+                <label>실수령 금액 (원) <span id="price-hint"></span></label>
                 <input id="f_amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 80000">
               </div>
               <div class="field full sf-field sf-field--full">
@@ -492,7 +438,7 @@ ADMIN_HTML = """<!DOCTYPE html>
     <div class="modal-head">
       <div>
         <div class="t" id="seat-title">예약자 명단</div>
-        <div id="seat-sub" style="color:var(--sub);font-size:14px;margin-top:3px;"></div>
+        <div id="seat-sub" style="color:var(--sf-muted);font-size:12px;margin-top:2px;"></div>
       </div>
       <button class="x" onclick="closeSeat()">✕</button>
     </div>
@@ -610,7 +556,7 @@ function progGroup(name){
 function renderSummary(summary){
   window._summary = summary;
   const el = $('summary');
-  if(!summary.length){ el.innerHTML = '<span class="empty">정원 관리 종목 없음</span>'; return; }
+  if(!summary.length){ el.innerHTML = '<span class="sf-empty">정원 관리 종목 없음</span>'; return; }
   el.innerHTML = summary.map((s,i)=>{
     const big = s.is_full ? '마감' : s.remaining+'<small style="font-size:16px;">자리</small>';
     const cls = s.booked>0 ? 'seatclick' : '';
@@ -643,7 +589,7 @@ function progColor(name){
 function renderList(rows){
   $('listttl').textContent = `${rows.length}건`;
   const el = $('list');
-  if(!rows.length){ el.innerHTML = '<div class="empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
+  if(!rows.length){ el.innerHTML = '<div class="sf-empty">이 날짜에 입력된 예약이 없습니다.</div>'; return; }
   let sumAmt = 0;
   const hdr = `<div class="res-hdr"><span class="h-time">시간</span><span class="h-prog">종목</span><span class="h-name">이름</span><span class="h-amt">금액</span><span class="h-acts"></span></div>`;
   const rowsHtml = rows.map(r=>{
@@ -817,7 +763,7 @@ function openSeat(i){
   $('seat-title').textContent = `${s.program} ${s.time_slot}`;
   $('seat-sub').textContent = `예약 ${s.booked}/${s.capacity}명 · 잔여 ${s.remaining}명 (이름을 누르면 수정)`;
   const body = $('seat-body');
-  body.innerHTML = rows.length ? `<div class="tbl-wrap"><table class="restable">
+  body.innerHTML = rows.length ? `<div style="overflow-x:auto;"><table class="restable">
     <thead><tr><th>이름</th><th>인원</th><th>금액</th><th></th></tr></thead>
     <tbody>${rows.map(r=>{
       const meta = [r.platform, r.payment_method, r.memo].filter(Boolean).map(esc).join(' · ');
@@ -827,10 +773,10 @@ function openSeat(i){
         <td><div class="tc-nm">${esc(r.customer_name)||'(이름없음)'}</div>${meta?`<div class="tc-meta">${meta}</div>`:''}</td>
         <td class="tc-ppl">${r.people}<small style="font-size:12px;color:var(--sub)">명</small></td>
         <td class="tc-amt">${amt>0?`<div class="main-amt">${amt.toLocaleString('ko-KR')}원</div>`:''}${dep>0?`<div class="dep-amt">예약금 ${dep.toLocaleString('ko-KR')}원</div>`:''}</td>
-        <td class="tc-acts"><button style="background:none;border:none;font-size:18px">✏️</button></td>
+        <td class="tc-acts">›</td>
       </tr>`;
     }).join('')}</tbody>
-  </table></div>` : '<div class="empty">이 시간대 예약이 없습니다.</div>';
+  </table></div>` : '<div class="sf-empty">이 시간대 예약이 없습니다.</div>';
   $('seatmodal').classList.add('show');
 }
 function closeSeat(){ $('seatmodal').classList.remove('show'); }

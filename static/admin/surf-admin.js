@@ -31,7 +31,13 @@
       document.documentElement.removeAttribute('data-theme');
     }
     const btn = themeButton();
-    if(btn) btn.textContent = dark ? '밝게' : '어둡게';
+    if(btn){
+      var label = dark ? '밝게' : '어둡게';
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+      // 아이콘 버튼(SVG 포함)이면 텍스트를 덮어쓰지 않는다
+      if(!btn.querySelector('svg')) btn.textContent = label;
+    }
   }
   function toggleTheme(){
     const cur = document.documentElement.hasAttribute('data-theme') ? 'dark' : 'light';

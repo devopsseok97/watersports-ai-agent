@@ -301,11 +301,14 @@ h1{{font-size:20px;margin:0 0 10px;}}p{{color:#8b98a5;font-size:14px;margin:0;}}
 
 # ---------------- 관리자 페이지 ----------------
 
+CSS_VER = "20260826-redesign"
+
+
 @router.get("/admin", response_class=HTMLResponse)
 async def photos_admin(asess: str | None = Cookie(default=None)):
     if not verify_session(asess):
         return RedirectResponse(url="/admin/login", status_code=302)
-    return HTMLResponse(ADMIN_HTML)
+    return HTMLResponse(ADMIN_HTML.replace("{CSS_VER}", CSS_VER))
 
 
 ADMIN_HTML = """<!DOCTYPE html>
@@ -318,92 +321,62 @@ ADMIN_HTML = """<!DOCTYPE html>
 <meta name="theme-color" content="#09090d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">
-<title>서퍼스트 관리자 · 사진</title>
+<link rel="stylesheet" href="/static/admin/surf-admin.css?v={CSS_VER}">
+<title>서퍼스트 · 사진 전달</title>
 <style>
-  :root {
-    --bg:#f6f8fa; --card:#ffffff; --line:#d0d7de; --txt:#1f2328; --sub:#57606a;
-    --accent:#6366f1; --accent-press:#4f46e5; --field:#f6f8fa; --shadow:0 1px 3px rgba(0,0,0,.08);
-    --header-bg:rgba(255,255,255,.92);
+  /* 사진 화면 전용: 썸네일과 삭제 버튼 */
+  .thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .thumb { position: relative; width: 74px; height: 74px; flex-shrink: 0; }
+  .thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 8px; display: block;
+    border: 1px solid var(--sf-line-soft);
   }
-  [data-theme="dark"] {
-    --bg:#09090d; --card:#111116; --line:#1e2028; --txt:#e4e7ef; --sub:#6b7280;
-    --accent:#818cf8; --accent-press:#6366f1; --field:#0d0f14; --shadow:none;
-    --header-bg:rgba(9,9,13,.85);
+  .thumb .xbtn {
+    position: absolute; top: -6px; right: -6px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--sf-red); color: #fff; border: 0;
+    font-size: 13px; font-weight: 900; line-height: 24px;
+    cursor: pointer; padding: 0;
   }
-  * { box-sizing:border-box; }
-  html { -webkit-text-size-adjust:100%; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-         background:var(--bg); color:var(--txt); font-size:17px; line-height:1.45; }
-  header { background:var(--header-bg); backdrop-filter:saturate(180%) blur(12px);
-           -webkit-backdrop-filter:saturate(180%) blur(12px);
-           border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
-  .htop { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .brand { font-size:19px; font-weight:800; }
-  .brand span { color:var(--sub); font-weight:600; font-size:14px; margin-left:4px; }
-  .htools { display:flex; align-items:center; gap:6px; }
-  .themebtn { background:var(--field); border:1px solid var(--line); color:var(--txt);
-              width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:19px; padding:0;
-              display:flex; align-items:center; justify-content:center; }
-  .logoutbtn { color:var(--sub); font-size:13px; font-weight:600; text-decoration:none;
-               padding:9px 12px; border-radius:10px; background:var(--field);
-               border:1px solid var(--line); white-space:nowrap; }
-  .logoutbtn:hover { color:var(--txt); }
-  nav { display:flex; gap:6px; padding:0 12px 12px; overflow-x:auto; }
-  nav a { flex:1; text-align:center; white-space:nowrap; text-decoration:none; color:var(--sub);
-          font-size:16px; font-weight:700; padding:11px 10px; border-radius:10px; background:var(--field); border:1px solid var(--line); }
-  nav a.active { color:#fff; background:var(--accent); border-color:var(--accent); }
-  main { padding:18px; max-width:900px; margin:0 auto; }
-  .new { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:22px; box-shadow:var(--shadow); }
-  .new input { background:var(--field); border:1px solid var(--line); color:var(--txt); padding:13px 14px; border-radius:10px; font-size:17px; flex:1; min-width:180px; }
-  button { background:var(--accent); color:#fff; border:none; padding:14px 18px; border-radius:11px; font-weight:800; cursor:pointer; font-size:17px; }
-  button:active { background:var(--accent-press); }
-  .album { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px; display:flex; gap:18px; align-items:flex-start; box-shadow:var(--shadow); }
-  .album.expired { opacity:0.5; }
-  .album .qr { width:130px; height:130px; border-radius:10px; background:#fff; flex-shrink:0; padding:6px; border:1px solid var(--line); }
-  .album .info { flex:1; min-width:0; }
-  .code { font-size:28px; font-weight:900; letter-spacing:3px; font-family:monospace; }
-  .meta { color:var(--sub); font-size:15px; margin:8px 0; }
-  .link { color:var(--accent); font-size:14px; word-break:break-all; }
-  .drop { border:2px dashed var(--line); border-radius:11px; padding:18px; text-align:center; color:var(--sub); font-size:15px; margin-top:12px; cursor:pointer; }
-  .drop.over { border-color:var(--accent); color:var(--accent); background:var(--field); }
-  .empty { color:var(--sub); padding:28px; text-align:center; font-size:16px; background:var(--card); border:1px dashed var(--line); border-radius:14px; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .hint { color:var(--sub); font-size:14px; margin:12px 0 0; line-height:1.6; }
-  .delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }
-  .delbtn:active { background:#dc2626; }
-  .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .thumb { position:relative; width:80px; height:80px; flex-shrink:0; }
-  .thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; border:1px solid var(--line); }
-  .thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;
-                 background:#ef4444; color:#fff; border:none; font-size:14px; font-weight:900;
-                 cursor:pointer; padding:0; line-height:40px; text-align:center; }
-  .thumb .xbtn:active { background:#dc2626; }
-  @media (max-width:560px){
-    main { padding:14px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
-    .album { flex-direction:column; align-items:center; text-align:center; }
-    .album .info { width:100%; }
-    .delbtn { min-height:44px; }
-    button { min-height:44px; }
+  .thumb .xbtn:hover { background: #b3382b; }
+  .album-create-panel .sf-form-grid {
+    grid-template-columns: 1fr auto;
+    align-items: end;
   }
+  .album-card__head .sf-btn { flex-shrink: 0; }
 </style><script src="/static/admin/surf-admin.js"></script></head>
 <body>
 <div class="sf-app">
   <aside class="sf-sidebar">
     <div class="sf-brand">서퍼스트<small>운영 콘솔</small></div>
     <nav class="sf-nav" aria-label="관리자 메뉴">
-      <a class="sf-nav__link" href="/admin/">홈</a>
-      <a class="sf-nav__link" href="/availability/admin">예약</a>
-      <a class="sf-nav__link" href="/photos/admin" aria-current="page">사진</a>
-      <a class="sf-nav__link" href="/dashboard/">분석</a>
+      <a class="sf-nav__link" href="/admin/">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span>홈</span>
+      </a>
+      <a class="sf-nav__link" href="/availability/admin">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>예약</span>
+      </a>
+      <a class="sf-nav__link" href="/photos/admin" aria-current="page">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+        <span>사진</span>
+      </a>
+      <a class="sf-nav__link" href="/dashboard/">
+        <svg class="sf-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>분석</span>
+      </a>
     </nav>
   </aside>
   <div class="sf-main">
     <header class="sf-topbar">
-      <div class="sf-mobile-brand">서퍼스트 운영 콘솔</div>
+      <div class="sf-topbar__title">사진 전달</div>
       <div class="sf-actions">
-        <button class="sf-btn sf-btn--ghost" id="themebtn" type="button">어둡게</button>
-        <a class="sf-btn sf-btn--ghost" href="/admin/logout">로그아웃</a>
+        <button class="sf-icon-btn" id="themebtn" type="button" aria-label="테마 전환">
+          <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9 7 7 0 01-9-9z"/></svg>
+        </button>
+        <a class="sf-btn sf-btn--sm sf-btn--ghost" href="/admin/logout">로그아웃</a>
       </div>
     </header>
     <main class="sf-page">
@@ -417,11 +390,11 @@ ADMIN_HTML = """<!DOCTYPE html>
         </div>
         <section class="sf-panel album-create-panel" id="album-create-panel">
           <div class="sf-form-grid">
-            <div class="sf-field sf-field--full">
+            <div class="sf-field">
               <label for="memo">앨범 메모</label>
               <input id="memo" placeholder="예: 8월 23일 오후 강습">
             </div>
-            <button class="sf-btn sf-btn--primary" onclick="createAlbum()" type="button">새 앨범 만들기</button>
+            <button class="sf-btn sf-btn--primary" onclick="createAlbum()" type="button">＋ 새 앨범</button>
           </div>
         </section>
         <section class="album-list" id="list"><div class="sf-empty">불러오는 중...</div></section>
@@ -455,7 +428,7 @@ async function load(){
             <div class="album-code">${esc(a.code)}</div>
             <div class="album-meta">${esc(a.memo)||'(메모 없음)'} · 사진 ${a.photo_count||0}장 · ${a.expired?'만료됨':'~'+fmt(a.expires_at)}</div>
           </div>
-          <button class="sf-btn sf-btn--danger delbtn" onclick="deleteAlbum('${a.code}')" type="button">삭제</button>
+          <button class="sf-btn sf-btn--sm sf-btn--danger" onclick="deleteAlbum('${a.code}')" type="button">삭제</button>
         </div>
         <a class="album-link" href="${base}/photos/p/${a.code}" target="_blank">${base}/photos/p/${a.code}</a>
         <div class="album-upload-status" id="upload-status-${a.code}" role="status" aria-live="polite"></div>

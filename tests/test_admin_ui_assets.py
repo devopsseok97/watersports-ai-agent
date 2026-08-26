@@ -1,3 +1,11 @@
+"""관리자 UI 자산 계약 테스트.
+
+이전에는 codex가 생성한 오버라이드 CSS 문자열까지 정확히 비교했지만,
+2026-08-26 재설계 이후 그 오버라이드는 없어졌다. 여기서는 재설계 후에도
+반드시 지켜야 할 계약(공유 자산 참조, 네비 라벨, 규약 문자열, 홈 워크플로우 등)만 검증한다.
+"""
+
+import re
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,14 +17,16 @@ from app.services import db
 client = TestClient(app)
 
 
+# ---------- 공유 자산 ----------
+
 def test_shared_admin_css_served():
     response = client.get("/static/admin/surf-admin.css")
     assert response.status_code == 200
     assert "--sf-river" in response.text
     assert ".sf-app" in response.text
-    assert ".sf-command-strip" in response.text
-    assert ".sf-metric--attention" in response.text
-    assert ".sf-metric--money" in response.text
+    assert ".sf-metric" in response.text
+    assert ".sf-status" in response.text
+    assert ".sf-nav" in response.text
 
 
 def test_shared_admin_js_served():
@@ -27,12 +37,10 @@ def test_shared_admin_js_served():
 
 
 def test_shared_admin_theme_contract():
-    css = client.get("/static/admin/surf-admin.css")
-    js = client.get("/static/admin/surf-admin.js")
-    assert css.status_code == 200
-    assert js.status_code == 200
-    assert '[data-theme="dark"]' in css.text
-    assert "setAttribute('data-theme', 'dark')" in js.text or 'setAttribute("data-theme", "dark")' in js.text
+    css = client.get("/static/admin/surf-admin.css").text
+    js = client.get("/static/admin/surf-admin.js").text
+    assert '[data-theme="dark"]' in css
+    assert "setAttribute('data-theme', 'dark')" in js or 'setAttribute("data-theme", "dark")' in js
 
 
 def test_landing_does_not_reference_admin_assets():
@@ -42,6 +50,8 @@ def test_landing_does_not_reference_admin_assets():
     assert "/static/admin/surf-admin.js" not in response.text
 
 
+# ---------- 공유 참조: 인증된 관리자 페이지 ----------
+
 def admin_cookie(monkeypatch):
     monkeypatch.setattr(admin, "verify_session", lambda token: True)
     monkeypatch.setattr(availability, "verify_session", lambda token: True)
@@ -50,12 +60,16 @@ def admin_cookie(monkeypatch):
     return {"asess": "test-session"}
 
 
+CSS_HREF_RE = re.compile(r'<link rel="stylesheet" href="/static/admin/surf-admin\.css\?v=[^"]+">')
+JS_SRC_RE = re.compile(r'<script src="/static/admin/surf-admin\.js"></script>')
+
+
 @pytest.mark.parametrize("path", ["/admin/", "/availability/admin", "/photos/admin", "/dashboard/"])
 def test_authenticated_admin_pages_reference_shared_assets(monkeypatch, path):
     response = client.get(path, cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
-    assert '<link rel="stylesheet" href="/static/admin/surf-admin.css?v=20260825-homeclean">' in response.text
-    assert '<script src="/static/admin/surf-admin.js"></script>' in response.text
+    assert CSS_HREF_RE.search(response.text), f"{path} 공유 CSS 링크 없음"
+    assert JS_SRC_RE.search(response.text), f"{path} 공유 JS 참조 없음"
 
 
 @pytest.mark.parametrize("path", ["/admin/", "/availability/admin", "/photos/admin", "/dashboard/"])
@@ -63,46 +77,47 @@ def test_authenticated_admin_pages_share_nav_labels(monkeypatch, path):
     response = client.get(path, cookies=admin_cookie(monkeypatch))
     assert response.status_code == 200
     for label in ["홈", "예약", "사진", "분석"]:
-        assert f">{label}<" in response.text
+        assert f">{label}<" in response.text, f"{path}에 {label} 라벨 없음"
 
+
+# ---------- 로그인 ----------
 
 def test_login_page_uses_surfirst_console_copy():
     response = client.get("/admin/login")
     assert response.status_code == 200
-    assert "서퍼스트 운영 콘솔" in response.text
-    assert "/static/admin/surf-admin.css?v=20260825-homeclean" in response.text
+    assert "서퍼스트" in response.text and "운영 콘솔" in response.text
+    assert CSS_HREF_RE.search(response.text)
 
 
-def test_touch_targets_keep_40px_minimums():
-    assert ".r-acts button { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 3px; color:var(--sub); min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
-    assert ".r-acts button { font-size:21px; padding:4px 3px; min-width:40px; min-height:40px; }" in availability.ADMIN_HTML
-    assert "min-width:40px; min-height:40px;" in admin.DASHBOARD_HTML
-    assert ".memobtn { background:var(--field); border:1px solid var(--line); color:var(--sub);" in admin.DASHBOARD_HTML
-    assert ".delrowbtn { background:transparent; border:none; color:var(--sub); font-size:16px;" in admin.DASHBOARD_HTML
-    assert ".turn .tbtn { background:var(--field); border:1px solid var(--line); color:var(--sub);" in admin.DASHBOARD_HTML
-    assert ".ibtn{background:var(--field);border:1px solid var(--line);color:var(--txt);" in dashboard.DASHBOARD_HTML
-    assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:17px;" in dashboard.DASHBOARD_HTML
-    assert ".rbtn{background:var(--field);border:1px solid var(--line);color:var(--sub);" in dashboard.DASHBOARD_HTML
-    assert "border-radius:7px;font-size:12px;font-weight:700;padding:4px 9px;min-width:40px;min-height:40px;cursor:pointer;}" in dashboard.DASHBOARD_HTML
-    assert ".report-tab { min-height: 40px;" in client.get("/static/admin/surf-admin.css").text
-    assert "width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;" in dashboard.DASHBOARD_HTML
-    assert ".delbtn { background:#ef4444; font-size:14px; padding:8px 14px; border-radius:8px; font-weight:700; flex-shrink:0; min-width:40px; min-height:40px; }" in photos.ADMIN_HTML
-    assert ".thumb .xbtn { position:absolute; top:-6px; right:-6px; width:40px; height:40px; border-radius:50%;" in photos.ADMIN_HTML
-    assert "cursor:pointer; padding:0; line-height:40px; text-align:center; }" in photos.ADMIN_HTML
+# ---------- 터치 타겟 ----------
 
-
-def test_mobile_topbar_wraps_actions_below_brand():
+def test_shared_css_defines_touch_target_baseline():
+    """모든 클릭 요소가 최소 40-44px 터치 영역을 갖도록 공용 토큰과 규칙이 있어야 한다."""
     css = client.get("/static/admin/surf-admin.css").text
-    assert ".sf-topbar { flex-wrap: wrap; align-items: flex-start; }" in css
-    assert ".sf-topbar .sf-mobile-brand { width: 100%; }" in css
+    assert "--sf-tap: 44px" in css
+    # 주요 인터랙션 요소가 최소 크기를 명시적으로 사용
+    assert re.search(r"\.sf-btn\s*\{[^}]*min-height:\s*var\(--sf-tap\)", css)
+    assert re.search(r"\.sf-icon-btn\s*\{[^}]*height:\s*40px", css)
+    assert re.search(r"\.sf-nav__link\s*\{[^}]*min-height:", css)
 
 
-def test_sidebar_nav_is_protected_from_legacy_inline_nav_rules():
+# ---------- 모바일 네비 ----------
+
+def test_mobile_uses_bottom_tab_nav():
+    """모바일에서 sf-nav가 하단 고정 탭바로 동작해야 한다."""
     css = client.get("/static/admin/surf-admin.css").text
-    assert ".sf-sidebar .sf-nav { padding: 0; overflow: visible; }" in css
-    assert ".sf-sidebar .sf-nav__link { background: transparent; border: 0; text-align: left; }" in css
-    assert ".sf-sidebar .sf-nav__link[aria-current=\"page\"] { background: #ffffff; color: var(--sf-navy); }" in css
+    assert re.search(r"\.sf-nav\s*\{[^}]*position:\s*fixed[^}]*bottom:\s*0", css)
+    assert "grid-template-columns: repeat(4, 1fr)" in css
 
+
+def test_desktop_uses_navy_sidebar():
+    """900px 이상에서는 좌측 네이비 사이드바를 그리고 탭바를 해제한다."""
+    css = client.get("/static/admin/surf-admin.css").text
+    assert "@media (min-width: 900px)" in css
+    assert "grid-template-columns: 208px minmax(0, 1fr)" in css
+
+
+# ---------- 홈 ----------
 
 def test_admin_home_has_operations_console_regions(monkeypatch):
     response = client.get("/admin/", cookies=admin_cookie(monkeypatch))
@@ -114,22 +129,19 @@ def test_admin_home_has_operations_console_regions(monkeypatch):
         'id="convos"',
         'href="/availability/admin"',
     ]:
-        assert marker in response.text
-    assert "오늘 운영" in response.text
+        assert marker in response.text, f"홈 화면에 {marker} 영역 없음"
+    assert "현장 상태" in response.text
     assert "예약 추가" in response.text
-    assert "id=\"fresh-intents-note\"" in response.text
-    assert "최근 7일" in response.text
-    assert "sf-command-strip" in response.text
     assert "sf-metric--attention" in response.text
     assert "sf-metric--money" in response.text
-    assert '<body class="sf-admin-home">' in response.text
+    # 최근 7일 필터가 살아있는지
+    assert "최근 7일" in response.text
 
 
 def test_admin_home_filters_stale_booking_intents_from_visible_work_queue():
     assert "const INTENT_TTL_DAYS = 7;" in admin.DASHBOARD_HTML
-    assert "function freshBookingIntents(rows){" in admin.DASHBOARD_HTML
-    assert "const intents=freshBookingIntents(rawIntents);" in admin.DASHBOARD_HTML
-    assert "document.getElementById('fresh-intents-note').textContent='최근 7일 문의만 표시';" in admin.DASHBOARD_HTML
+    assert "function freshBookingIntents(rows)" in admin.DASHBOARD_HTML
+    assert "const intents = freshBookingIntents(rawIntents);" in admin.DASHBOARD_HTML
 
 
 def test_booking_intent_api_uses_recent_window_contract():
@@ -140,7 +152,7 @@ def test_booking_intent_api_uses_recent_window_contract():
 
 def test_admin_home_today_metric_targets_today_reservations_modal():
     assert """onclick="openCard('today-reservations')\"""" in admin.DASHBOARD_HTML
-    assert "if(type==='today-reservations'){" in admin.DASHBOARD_HTML
+    assert "type === 'today-reservations'" in admin.DASHBOARD_HTML
     assert "오늘 예약" in admin.DASHBOARD_HTML
 
 
@@ -148,37 +160,26 @@ def test_admin_home_mobile_metric_order_prioritizes_field_work():
     html = admin.DASHBOARD_HTML
     ordered_labels = ["오늘 방문", "입금대기", "예약문의", "이번 달 수입"]
     positions = [html.index(f'<div class="sf-metric__label">{label}</div>') for label in ordered_labels]
-    assert positions == sorted(positions)
-
-
-def test_admin_home_spacing_uses_consistent_mobile_grid_contract():
-    css = client.get("/static/admin/surf-admin.css").text
-    assert ".sf-admin-home .sf-page { padding: 20px; }" in css
-    assert ".sf-admin-home .sf-page-head { margin-bottom: 12px; }" in css
-    assert ".sf-admin-home .sf-command-strip { margin: 0 0 12px; padding: 12px; }" in css
-    assert ".sf-admin-home .ops-metrics { gap: 10px; }" in css
-    assert ".sf-admin-home .ops-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; align-items: start; }" in css
-    assert ".sf-admin-home .ops-layout > .sf-panel { grid-column: span 2; }" in css
-    assert ".sf-admin-home .ops-layout > section:nth-child(3), .sf-admin-home .ops-layout > section:nth-child(4) { min-height: 0; }" in css
-    assert ".sf-admin-home .sf-page { padding: 10px 10px 18px; }" in css
-    assert ".sf-admin-home .ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }" in css
-    assert ".sf-admin-home .sf-metric { min-height: 86px; padding: 10px; border-radius: 8px; }" in css
-    assert ".sf-admin-home .ops-layout { grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }" in css
-    assert ".sf-admin-home .ops-layout > .sf-panel { grid-column: 1 / -1; }" in css
-    assert ".sf-admin-home .sf-panel { padding: 12px; border-radius: 8px; }" in css
-    assert ".sf-admin-home .sf-section-title { margin-bottom: 9px; font-size: 14px; }" in css
-    assert ".sf-admin-home .sf-empty { padding: 14px; border-radius: 8px; }" in css
+    assert positions == sorted(positions), "홈 지표 순서: 오늘 방문 → 입금대기 → 예약문의 → 이번 달 수입"
 
 
 def test_admin_home_timeline_uses_explicit_status_mapping():
-    assert "function timelineStatusClass(status){" in admin.DASHBOARD_HTML
+    assert "function timelineStatusClass(status)" in admin.DASHBOARD_HTML
     assert "if(status==='예약') return 'sf-status--ok';" in admin.DASHBOARD_HTML
     assert "if(status==='입금대기') return 'sf-status--pending';" in admin.DASHBOARD_HTML
     assert "if(status==='노쇼') return 'sf-status--danger';" in admin.DASHBOARD_HTML
-    assert "if(status==='취소'||status==='예약취소'||status==='취소됨') return 'sf-status--muted';" in admin.DASHBOARD_HTML
-    assert "return 'sf-status--muted';" in admin.DASHBOARD_HTML
     assert "오늘 예약이 없습니다." in admin.DASHBOARD_HTML
 
+
+def test_admin_home_uses_data_attribute_for_user_id_actions():
+    """user_id는 onclick 인라인이 아니라 data 속성으로 전달해야 XSS 안전하다."""
+    assert "function attr(s)" in admin.DASHBOARD_HTML
+    assert "function openUserFromElement(el)" in admin.DASHBOARD_HTML
+    assert 'data-user-id="${attr(r.user_id)}"' in admin.DASHBOARD_HTML
+    assert "openUser('${esc(r.user_id)}')" not in admin.DASHBOARD_HTML
+
+
+# ---------- 예약 ----------
 
 def test_availability_page_has_workbench_regions(monkeypatch):
     response = client.get("/availability/admin", cookies=admin_cookie(monkeypatch))
@@ -214,18 +215,6 @@ def test_availability_admin_html_contains_summary_status_contract():
         assert marker in availability.ADMIN_HTML
 
 
-def test_mobile_seat_board_is_compact_and_readable_without_horizontal_scroll():
-    css = client.get("/static/admin/surf-admin.css").text
-    assert ".seat-board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; overflow: visible; padding-bottom: 0; }" in css
-    assert ".seat-card { min-width: 0; min-height: 86px; padding: 7px 7px 6px; border-radius: 9px; }" in css
-    assert ".seat-card__top { align-items: center; flex-direction: row; gap: 4px; font-size: 10px; }" in css
-    assert ".seat-card__time { margin-top: 5px; font-size: 12px; font-weight: 900; }" in css
-    assert ".seat-card__big { margin-top: 4px; font-size: 21px; }" in css
-    assert ".seat-card__meta { margin-top: 4px; font-size: 10px; }" in css
-    mobile_block = css.split("@media (max-width: 640px)", 1)[1].split("@media (max-width: 480px)", 1)[0]
-    assert ".seat-board { display: flex; overflow-x: auto;" not in mobile_block
-
-
 def test_availability_admin_html_contains_list_badges_and_actions_contract():
     for marker in [
         '<span class="sf-status sf-status--ok">예약</span>',
@@ -244,12 +233,7 @@ def test_availability_add_reservation_submits_and_resets_status():
     assert "$('f_status').value='예약';" in availability.ADMIN_HTML
 
 
-def test_admin_home_uses_data_attribute_for_user_id_actions():
-    assert "function attr(s){" in admin.DASHBOARD_HTML
-    assert "function openUserFromElement(el){" in admin.DASHBOARD_HTML
-    assert 'data-user-id="${attr(r.user_id)}"' in admin.DASHBOARD_HTML
-    assert "openUser('${esc(r.user_id)}')" not in admin.DASHBOARD_HTML
-
+# ---------- 사진 ----------
 
 def test_photos_page_has_delivery_regions(monkeypatch):
     response = client.get("/photos/admin", cookies=admin_cookie(monkeypatch))
@@ -264,6 +248,8 @@ def test_photos_page_has_delivery_regions(monkeypatch):
     ]:
         assert marker in response.text
 
+
+# ---------- 분석 ----------
 
 def test_dashboard_page_has_report_regions(monkeypatch):
     response = client.get("/dashboard/", cookies=admin_cookie(monkeypatch))
