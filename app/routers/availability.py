@@ -104,7 +104,7 @@ async def set_status(
     return {"ok": True, "reservation": row}
 
 
-CSS_VER = "20260826-navfix"
+CSS_VER = "20260826-seats"
 
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -127,23 +127,129 @@ ADMIN_HTML = """<!DOCTYPE html>
 <link rel="stylesheet" href="/static/admin/surf-admin.css?v={CSS_VER}">
 <title>서퍼스트 · 예약 관리</title>
 <style>
-  /* 예약 화면 전용 */
-  .seatlegend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 10px; }
-  .seatlegend .lg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--sf-muted); font-weight: 700; }
-  .seatlegend .lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-  .seat-card { position: relative; overflow: hidden; }
-  .seat-card .gbar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gc, var(--sf-line)); }
-  .seat-card.grp-paddle { --gc: var(--sf-blue); }
-  .seat-card.grp-kayak  { --gc: var(--sf-purple); }
-  .seat-card.grp-wind   { --gc: var(--sf-river); }
-  .seat-card.grp-foil   { --gc: #db2777; }
-  .seat-card.grp-etc    { --gc: var(--sf-muted); }
-  .seat-card.ok   { border-color: color-mix(in srgb, var(--sf-green) 45%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-green) 6%, var(--sf-surface)); }
-  .seat-card.warn { border-color: color-mix(in srgb, var(--sf-yellow) 55%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-yellow) 8%, var(--sf-surface)); }
-  .seat-card.full { border-color: color-mix(in srgb, var(--sf-red) 55%, var(--sf-line-soft)); background: color-mix(in srgb, var(--sf-red) 6%, var(--sf-surface)); }
-  .seat-card.ok .seat-card__big { color: var(--sf-green); }
-  .seat-card.warn .seat-card__big { color: #9a6d00; }
-  .seat-card.full .seat-card__big { color: var(--sf-red); }
+  /* ===== 잔여석: 종목별 그룹 + 진행바 ===== */
+  .seats-panel .panel-headline { align-items: flex-start; }
+  .seats-summary {
+    font-size: 13px; font-weight: 800; color: var(--sf-ink);
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap; justify-content: flex-end;
+  }
+  .seats-summary small { color: var(--sf-muted); font-weight: 700; margin-left: 2px; }
+
+  .seat-groups { display: grid; gap: 10px; }
+  .seat-group {
+    border: 1px solid var(--sf-line-soft);
+    border-radius: var(--sf-radius);
+    background: var(--sf-surface);
+    overflow: hidden;
+  }
+  .seat-group.grp-paddle { --gc: var(--sf-blue); }
+  .seat-group.grp-kayak  { --gc: var(--sf-purple); }
+  .seat-group.grp-wind   { --gc: var(--sf-river); }
+  .seat-group.grp-foil   { --gc: #db2777; }
+  .seat-group.grp-etc    { --gc: var(--sf-muted); }
+  .seat-group__head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    background: color-mix(in srgb, var(--gc) 8%, transparent);
+    border-bottom: 1px solid var(--sf-line-soft);
+    border-left: 3px solid var(--gc);
+  }
+  .seat-group__title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 900; letter-spacing: -0.01em;
+    min-width: 0;
+  }
+  .seat-group__title b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seat-group__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gc);
+    flex-shrink: 0;
+  }
+  .seat-group__meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .seat-group__count {
+    font-size: 14px; font-weight: 900; color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .seat-group__count small {
+    color: var(--sf-muted); font-weight: 700; font-size: 11px;
+    margin-left: 2px;
+  }
+
+  .seat-group__slots { display: grid; }
+  .seat-row {
+    display: grid;
+    grid-template-columns: 52px minmax(60px, 1fr) 72px;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "time bar num"
+      "time meta meta";
+    column-gap: 12px; row-gap: 2px;
+    padding: 10px 12px;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--sf-line-soft);
+    text-align: left; color: inherit;
+    cursor: default;
+    width: 100%;
+    min-height: var(--sf-tap);
+  }
+  .seat-row:first-child { border-top: 0; }
+  .seat-row.clickable { cursor: pointer; }
+  .seat-row.clickable:hover { background: color-mix(in srgb, var(--gc, var(--sf-river)) 5%, transparent); }
+
+  .seat-row__time {
+    grid-area: time;
+    font-weight: 900; font-size: 14px; color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    align-self: center;
+  }
+  .seat-row__bar {
+    grid-area: bar;
+    height: 8px; border-radius: 999px;
+    background: var(--sf-line-soft);
+    overflow: hidden;
+    align-self: center;
+  }
+  .seat-row__fill {
+    display: block; height: 100%; border-radius: 999px;
+    background: var(--gc, var(--sf-river));
+    transition: width .25s ease;
+  }
+  .seat-row.warn .seat-row__fill { background: var(--sf-yellow); }
+  .seat-row.full .seat-row__fill { background: var(--sf-red); }
+  .seat-row__num {
+    grid-area: num;
+    text-align: right;
+    font-weight: 900; font-size: 17px; color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    align-self: center;
+  }
+  .seat-row__num small {
+    font-size: 11px; color: var(--sf-muted);
+    font-weight: 700; margin-left: 2px;
+  }
+  .seat-row__badge {
+    display: inline-block;
+    background: var(--sf-red-soft); color: var(--sf-red);
+    font-size: 11px; font-weight: 900;
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .seat-row.warn .seat-row__num { color: #9a6d00; }
+  .seat-row.full .seat-row__num small { display: none; }
+  .seat-row__meta {
+    grid-area: meta;
+    font-size: 11px; color: var(--sf-muted);
+    font-weight: 700;
+  }
+  @media (min-width: 900px) {
+    .seat-row { grid-template-columns: 60px minmax(80px, 1fr) 90px; padding: 11px 14px; }
+    .seat-row__time { font-size: 15px; }
+    .seat-row__num { font-size: 19px; }
+  }
 
   /* 예약 목록 */
   .pdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
@@ -288,18 +394,12 @@ ADMIN_HTML = """<!DOCTYPE html>
 
         <div class="reservation-layout">
           <div class="reservation-main">
-            <section class="sf-panel">
+            <section class="sf-panel seats-panel">
               <div class="panel-headline">
                 <h2 class="sf-section-title">잔여석</h2>
-                <span class="sf-page-sub">여유 · 주의 · 마감</span>
+                <div class="seats-summary" id="seats-summary" aria-live="polite"></div>
               </div>
-              <div class="seatlegend">
-                <span class="lg"><i style="background:#2563eb"></i>패들보드</span>
-                <span class="lg"><i style="background:#7c3aed"></i>카약</span>
-                <span class="lg"><i style="background:#0d9488"></i>윈드서핑</span>
-                <span class="lg"><i style="background:#db2777"></i>포일류</span>
-              </div>
-              <div class="seat-board" id="summary"></div>
+              <div class="seat-groups" id="summary"></div>
             </section>
 
             <section class="sf-panel">
@@ -556,19 +656,70 @@ function progGroup(name){
 function renderSummary(summary){
   window._summary = summary;
   const el = $('summary');
-  if(!summary.length){ el.innerHTML = '<span class="sf-empty">정원 관리 종목 없음</span>'; return; }
-  el.innerHTML = summary.map((s,i)=>{
-    const big = s.is_full ? '마감' : s.remaining+'<small style="font-size:16px;">자리</small>';
-    const cls = s.booked>0 ? 'seatclick' : '';
-    const label = s.is_full ? '마감' : (s.remaining <= Math.max(1, Math.ceil(s.capacity * 0.25)) ? '주의' : '여유');
-    const labelClass = s.is_full ? 'sf-status--full' : (label === '주의' ? 'sf-status--pending' : 'sf-status--ok');
-    return `<button class="seat-card seat ${seatClass(s)} grp-${progGroup(s.program)} ${cls}" onclick="openSeat(${i})" type="button">
-      <div class="gbar"></div>
-      <div class="seat-card__top"><span>${esc(s.program)}</span><span class="sf-status ${labelClass}">${label}</span></div>
-      <div class="seat-card__time">${esc(s.time_slot)}</div>
-      <div class="seat-card__big">${big}</div>
-      <div class="seat-card__meta">${s.booked}/${s.capacity}명${s.booked>0?' · 명단 보기':''}</div>
-    </button>`;
+  const sumEl = $('seats-summary');
+  if(!summary.length){
+    el.innerHTML = '<div class="sf-empty">정원 관리 종목 없음</div>';
+    if(sumEl) sumEl.textContent = '';
+    return;
+  }
+
+  // 종목별로 묶기
+  const groups = {};
+  summary.forEach((s, i) => {
+    const key = s.program;
+    if(!groups[key]) groups[key] = { program: key, slots: [], cap: 0, booked: 0 };
+    groups[key].slots.push({ ...s, _idx: i });
+    groups[key].cap += Number(s.capacity) || 0;
+    groups[key].booked += Number(s.booked) || 0;
+  });
+
+  // 상단 요약: 종목 수 · 총 잔여
+  const totalCap = summary.reduce((a, s) => a + (Number(s.capacity) || 0), 0);
+  const totalBooked = summary.reduce((a, s) => a + (Number(s.booked) || 0), 0);
+  const totalRem = Math.max(totalCap - totalBooked, 0);
+  const fullCount = summary.filter(s => s.is_full).length;
+  if(sumEl){
+    let bits = [`${totalRem}<small>/${totalCap}석 여유</small>`];
+    if(fullCount > 0) bits.push(`<span class="sf-status sf-status--full">${fullCount}개 마감</span>`);
+    sumEl.innerHTML = bits.join(' · ');
+  }
+
+  el.innerHTML = Object.values(groups).map(g => {
+    const grp = progGroup(g.program);
+    const gRem = Math.max(g.cap - g.booked, 0);
+    const gCls = g.booked >= g.cap ? 'full' : (g.booked >= g.cap * 0.8 ? 'warn' : 'ok');
+    const gStatus = gCls === 'full' ? { cls: 'full', label: '마감' }
+                   : gCls === 'warn' ? { cls: 'pending', label: '주의' }
+                   : { cls: 'ok', label: '여유' };
+    return `<div class="seat-group grp-${grp}">
+      <div class="seat-group__head">
+        <div class="seat-group__title">
+          <span class="seat-group__dot" aria-hidden="true"></span>
+          <b>${esc(g.program)}</b>
+        </div>
+        <div class="seat-group__meta">
+          <span class="seat-group__count">${gRem}<small>/${g.cap}석</small></span>
+          <span class="sf-status sf-status--${gStatus.cls}">${gStatus.label}</span>
+        </div>
+      </div>
+      <div class="seat-group__slots">
+        ${g.slots.map(s => {
+          const cap = Number(s.capacity) || 1;
+          const pct = Math.min(100, Math.round((s.booked / cap) * 100));
+          const cls = seatClass(s);
+          const isClick = s.booked > 0;
+          const numHtml = s.is_full
+            ? '<span class="seat-row__badge">마감</span>'
+            : `${s.remaining}<small>석</small>`;
+          return `<button class="seat-row ${cls} ${isClick ? 'clickable' : ''}" onclick="openSeat(${s._idx})" type="button" ${isClick ? '' : 'aria-disabled="true"'}>
+            <span class="seat-row__time">${esc(s.time_slot)}</span>
+            <span class="seat-row__bar" aria-hidden="true"><span class="seat-row__fill" style="width:${pct}%"></span></span>
+            <span class="seat-row__num">${numHtml}</span>
+            <span class="seat-row__meta">${s.booked}/${cap}명${isClick ? ' · 명단' : ''}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
   }).join('');
 }
 

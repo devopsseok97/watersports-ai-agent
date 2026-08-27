@@ -203,11 +203,13 @@ def test_availability_admin_html_contains_focus_fallback_contract():
 
 
 def test_availability_admin_html_contains_summary_status_contract():
+    # 잔여석은 종목별 그룹 + 행형 진행바로 렌더링된다 (2026-08-27 재설계).
     for marker in [
         "여유",
         "주의",
         "마감",
-        "seat-card",
+        "seat-group",
+        "seat-row",
         "sf-status--pending",
         "sf-status--full",
         "sf-status--ok",
